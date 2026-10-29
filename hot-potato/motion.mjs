@@ -6,4 +6,4 @@ export function poseWeights(previous,target,dt){
  const total=weights.reduce((a,b)=>a+b,0)||1;
  return weights.map(w=>w/total);
 }
-export function renderState(g,alpha){const a=Math.max(0,Math.min(1,alpha));return {spin:lerp(g.prevSpin??g.spin,g.spin,a),y:lerp(g.prevY??g.y,g.y,a),travel:lerp(g.prevTravel??g.travel,g.travel,a),time:Math.max(0,g.tick-1+a)/120}}
+export function renderState(g,alpha){const a=Math.max(0,Math.min(1,alpha));return {x:lerp(g.prevX??g.x??112,g.x??112,a),spin:lerp(g.prevSpin??g.spin,g.spin,a),y:lerp(g.prevY??g.y,g.y,a),travel:lerp(g.prevTravel??g.travel,g.travel,a),time:Math.max(0,g.tick-1+a)/120}}

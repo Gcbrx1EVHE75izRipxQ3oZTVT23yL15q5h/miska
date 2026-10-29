@@ -38,33 +38,68 @@ export function rimImpact(r,x0,y0,x1,y1){
   // Already overlapping but travelling away is not another impact.
   if(approach<=1e-8)continue;
   const incidence=approach/Math.sqrt(a);
-  const result={fraction,nx,ny,incidence,grazing:incidence<.72,normalSpeed:-approach/STEP,spinDirection:Math.sign(dx*ny-dy*nx)||1};
+  const result={edge,fraction,nx,ny,incidence,grazing:incidence<.72,normalSpeed:-approach/STEP,spinDirection:Math.sign(dx*ny-dy*nx)||1};
   if(!first||fraction<first.fraction)first=result;
  }
  return first;
 }
+// Unit-mass disc, I = 1/2*m*r^2. Normal restitution transfers linear
+// momentum; Coulomb friction at the contact point creates angular momentum.
+export function resolveRimVelocity(body,impact,forwardSpeed,ringVelocity=0){
+ const {nx,ny}=impact,tx=-ny,ty=nx,R=18;
+ const vx=body.vx+forwardSpeed,vy=body.vy-ringVelocity;
+ const vn=vx*nx+vy*ny;if(vn>=0)return {normalImpulse:0,tangentImpulse:0};
+ const normalImpulse=-(1+.28)*vn;
+ const tangentVelocity=vx*tx+vy*ty-body.omega*R;
+ const tangentImpulse=Math.max(-.32*normalImpulse,Math.min(.32*normalImpulse,-tangentVelocity/3));
+ body.vx+=normalImpulse*nx+tangentImpulse*tx;
+ body.vy+=normalImpulse*ny+tangentImpulse*ty;
+ body.omega-=2*tangentImpulse/R;
+ return {normalImpulse,tangentImpulse};
+}
+export function downwardGate(r,x0,y0,x1,y1){
+ if(!(y0<-1e-7&&y1>=-1e-7&&y1>y0))return null;
+ const x=x0+(x1-x0)*(-y0/(y1-y0));
+ if(Math.abs(x)>=r.half-5)return null;
+ return !r.grazed&&Math.abs(x)<r.half*.2?'perfect':'pass';
+}
 export class Game{
- constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.spinRemaining=0;this.spinDirection=1;this.rimCooldown=0;this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
- step(tap=false){if(this.mode!=='play')return;this.events=[];const beforeY=this.y,beforeTravel=this.travel,time=this.tick*STEP;this.prevY=this.y;this.prevTravel=this.travel;this.prevSpin=this.spin;this.rimCooldown=Math.max(0,this.rimCooldown-STEP);if(this.spinRemaining>0){const turn=Math.min(this.spinRemaining,Math.PI*2/.6*STEP);this.spin+=turn*this.spinDirection;this.spinRemaining-=turn;if(this.spinRemaining<1e-8){this.spin=Math.round(this.spin/(Math.PI*2))*Math.PI*2;this.spinRemaining=0;}}if(this.demo)tap=this.course.taps.has(this.tick);integrate(this,tap);if(tap)this.flapTime=.16;this.flapTime=Math.max(0,this.flapTime-STEP);this.noticeTime=Math.max(0,this.noticeTime-STEP);this.travel+=speed(this.passed)*STEP;this.tick++;
- if(this.y>H-24){this.lose('Putosit liian alas');return}
- const r=this.course.rings[this.passed];const x0=PX-(r.x-beforeTravel),x1=PX-(r.x-this.travel),y0=beforeY-ringY(r,time),y1=this.y-ringY(r,time+STEP);const hit=contact(r,x0,y0,x1,y1);
- const impact=this.rimCooldown<=0?rimImpact(r,x0,y0,x1,y1):null;
- if(impact){
-  if(!impact.grazing){this.lose('Osuit suoraan renkaan reunaan');return}
-  this.vy=Math.max(-280,Math.min(450,this.vy-1.15*impact.normalSpeed*impact.ny));
-  this.rimCooldown=.22;r.grazed=true;this.streak=0;
-  if(this.spinRemaining===0){this.spinDirection=impact.spinDirection;this.spinRemaining=Math.PI*2;}
-  this.notice='HIPAISU!';this.noticeTime=.65;
-  this.events.push({type:'graze',x:PX,y:this.y});
+ constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.omega=0;this.x=PX;this.prevX=PX;this.vx=0;this.rimFeedback=0;this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
+ step(tap=false){
+  if(this.mode!=='play')return;this.events=[];
+  const beforeY=this.y,beforeX=this.x,beforeTravel=this.travel,time=this.tick*STEP;
+  this.prevY=this.y;this.prevX=this.x;this.prevTravel=this.travel;this.prevSpin=this.spin;
+  this.rimFeedback=Math.max(0,this.rimFeedback-STEP);
+  // Air resistance slows rotation without prescribing an angle or a full turn.
+  this.omega*=Math.exp(-.65*STEP);this.spin+=this.omega*STEP;
+  if(this.demo)tap=this.course.taps.has(this.tick);
+  integrate(this,tap);
+  // Automatic forward flight gently recovers its screen position after recoil.
+  this.vx+=(-7*(this.x-PX)-4*this.vx)*STEP;this.x+=this.vx*STEP;
+  if(tap)this.flapTime=.25;
+  this.flapTime=Math.max(0,this.flapTime-STEP);this.noticeTime=Math.max(0,this.noticeTime-STEP);
+  const forward=speed(this.passed);this.travel+=forward*STEP;this.tick++;
+  const r=this.course.rings[this.passed],ry0=ringY(r,time),ry1=ringY(r,time+STEP);
+  const x0=beforeX-(r.x-beforeTravel),y0=beforeY-ry0;
+  const freeX=this.x-(r.x-this.travel),freeY=this.y-ry1;
+  const impact=rimImpact(r,x0,y0,freeX,freeY);
+  let scored=null;
+  if(impact){
+   const {fraction:f,nx,ny,edge}=impact;
+   resolveRimVelocity(this,impact,forward,(ry1-ry0)/STEP);
+   const touchX=edge+nx*23.02,touchY=ny*23.02;
+   // Resolve penetration at time of impact, then advance the remaining substep.
+   this.x=r.x-(beforeTravel+forward*STEP*f)+touchX+this.vx*STEP*(1-f);
+   this.y=ry0+(ry1-ry0)*f+touchY+this.vy*STEP*(1-f);
+   r.grazed=true;this.streak=0;
+   scored=downwardGate(r,x0,y0,touchX,touchY);
+   scored??=downwardGate(r,touchX,touchY,this.x-(r.x-this.travel),this.y-ry1);
+   if(this.rimFeedback===0){this.rimFeedback=.12;this.notice='KIMMOKE!';this.noticeTime=.65;this.events.push({type:'graze',x:this.x,y:this.y});}
+  }else scored=downwardGate(r,x0,y0,freeX,freeY);
+  if(this.y>H-24){this.lose('Putosit liian alas');return}
+  if(this.x-(r.x-this.travel)>r.half+18&&!scored){this.lose('Ohitit renkaan');return}
+  if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:this.x,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
  }
- // A skim is allowed to overlap the decorative rim. The potato's centre must
- // still cross INSIDE the opening, downward; touching never completes a ring.
- const crossing=y0<-1e-7&&y1>=-1e-7&&y1>y0;
- const crossX=crossing?x0+(x1-x0)*(-y0/(y1-y0)):Infinity;
- let scored=hit==='perfect'||hit==='pass'?hit:null;
- if(r.grazed&&crossing&&Math.abs(crossX)<r.half-5)scored='pass';
- if(x1>r.half+18&&!scored){this.lose('Ohitit renkaan');return}
- if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:PX,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
- }
+
  lose(reason){this.mode='over';this.reason=reason;this.events.push({type:'over'})}
 }
