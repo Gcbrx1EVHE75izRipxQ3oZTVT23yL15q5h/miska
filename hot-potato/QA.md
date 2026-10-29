@@ -23,3 +23,10 @@ Desktop Chrome and embedded 390×844 / 320×568 portrait viewports checked. Menu
 
 ## Review limits
 This is a 2.5D sprite game, not a real-time 3D scene. The character uses four sprite poses (happy, raised wings, downward flap with closed eyes, startled fall), with animated tilt/squash. It is frame animation rather than a skeletal 3D rig. The panorama crossfade and foreground parallax are implemented; the scenery itself is rendered imagery. A physical-phone performance/touch check and owner acceptance are required before replacing production. No advertising, payments, server leaderboard or app-store packaging is included in this browser scope.
+
+## Smooth flight and rim reactions — 2026-10-30
+Visual interpolation now uses the same previous/current simulation tick for the potato, rings and scrolling world. Tilt and squash use exponential easing; expression sprites crossfade on a transparent compositing surface. Fixed-step gravity/tap/speed values are unchanged.
+
+Rim collisions use the first swept contact normal: incidence below 0.72 is a tangential skim, producing a small vertical deflection and one full 0.6-second spin. Direct impacts remain fatal. A short same-rim cooldown avoids repeated collision reactions during overlap. A skim resets the PERFECT chain and awards no points by itself; the centre must subsequently cross inside the opening, downward. Missed rings still end the run. The world lab includes a reproducible rim-skim fixture, marked test-only, that can be followed by a genuine pass.
+
+Validation: `node --test hot-potato/tests/*.test.mjs` — 29 tests passed, including both rim sides, high-speed direct hits, separation, deflection, spin completion, no touch-only scoring, genuine pass after skim, and equal 60/120Hz physics and easing response. The existing 250/500-ring route replays also continue to pass.
