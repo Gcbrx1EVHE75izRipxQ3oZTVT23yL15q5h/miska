@@ -1,0 +1,2 @@
+2000-ring-validation: 10.964s
+{"rings":2000,"status":"play","score":997400,"reason":""}

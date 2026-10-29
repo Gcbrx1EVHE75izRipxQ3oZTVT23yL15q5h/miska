@@ -1,0 +1,24 @@
+✔ Original prototype gravity and impulse, fixed 120Hz (1.534326ms)
+✔ Boundary ring numbers, radii and colors belong to exact world (0.252021ms)
+✔ Center dive requires complete downward traversal (0.452475ms)
+✔ Upward traversal earns no ring (0.250384ms)
+✔ Both rims collide, upwards and downwards, swept fast motion (1.459807ms)
+✔ Passing the opening with near edge clearance is legal (0.171942ms)
+✔ Missed ring terminates run; later rings cannot replace it (1.224203ms)
+✔ 400 rings, all moving rings, all four transitions are reachable (61.968011ms)
+✔ 60 and 120Hz rendering drive identical physics, scores and trajectory (19.372184ms)
+✔ World jump checkpoints replay with no missing inputs (9.520709ms)
+✔ Every boundary crossfades continuously without resetting state (6.573963ms)
+✔ PERFECT chain multiplies points and nonperfect resets multiplier (1.072737ms)
+✔ Course extends beyond initial 400 rings and extension remains reachable (803.245171ms)
+✔ Pause and ready freeze physics (0.271277ms)
+✔ Increasing difficulty stays bounded and playable (0.087157ms)
+✔ Every initial ring allows +/-16.67ms local timing shifts (72.571864ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1130.305611
