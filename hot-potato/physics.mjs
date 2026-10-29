@@ -22,13 +22,49 @@ export function contact(r,x0,y0,x1,y1){const radius=18,tube=5;const dy=y1-y0;
  for(const edge of [-r.half,r.half]){const dx=x1-x0,den=dx*dx+dy*dy;let t=den?Math.max(0,Math.min(1,((edge-x0)*dx-y0*dy)/den)):0;const ex=x0+dx*t-edge,ey=y0+dy*t;if(ex*ex+ey*ey<(radius+tube)**2)return 'rim'}
  if(y0<-1e-7&&y1>=-1e-7&&dy>0){const t=-y0/dy,x=x0+(x1-x0)*t;if(Math.abs(x)<r.half-radius-tube)return Math.abs(x)<r.half*.2?'perfect':'pass';if(Math.abs(x)<r.half+radius+tube)return 'rim'}
  if(x1>r.half+radius)return 'miss';return null}
+// First time of impact, rather than closest approach: the contact normal determines
+// whether the potato strikes head-on or skims tangentially across the rim.
+export function rimImpact(r,x0,y0,x1,y1){
+ const dx=x1-x0,dy=y1-y0,a=dx*dx+dy*dy,R=23;
+ if(a<1e-16)return null;
+ let first=null;
+ for(const edge of [-r.half,r.half]){
+  const ox=x0-edge,oy=y0,b=2*(ox*dx+oy*dy),cc=ox*ox+oy*oy-R*R;
+  const discriminant=b*b-4*a*cc;if(discriminant<0)continue;
+  const fraction=cc<=0?0:(-b-Math.sqrt(discriminant))/(2*a);
+  if(fraction<0||fraction>1)continue;
+  const cx=ox+dx*fraction,cy=oy+dy*fraction,len=Math.hypot(cx,cy)||1;
+  const nx=cx/len,ny=cy/len,approach=-(dx*nx+dy*ny);
+  // Already overlapping but travelling away is not another impact.
+  if(approach<=1e-8)continue;
+  const incidence=approach/Math.sqrt(a);
+  const result={fraction,nx,ny,incidence,grazing:incidence<.72,normalSpeed:-approach/STEP,spinDirection:Math.sign(dx*ny-dy*nx)||1};
+  if(!first||fraction<first.fraction)first=result;
+ }
+ return first;
+}
 export class Game{
- constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
- step(tap=false){if(this.mode!=='play')return;this.events=[];const beforeY=this.y,beforeTravel=this.travel,time=this.tick*STEP;if(this.demo)tap=this.course.taps.has(this.tick);integrate(this,tap);if(tap)this.flapTime=.16;this.flapTime=Math.max(0,this.flapTime-STEP);this.noticeTime=Math.max(0,this.noticeTime-STEP);this.travel+=speed(this.passed)*STEP;this.tick++;
+ constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.spinRemaining=0;this.spinDirection=1;this.rimCooldown=0;this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
+ step(tap=false){if(this.mode!=='play')return;this.events=[];const beforeY=this.y,beforeTravel=this.travel,time=this.tick*STEP;this.prevY=this.y;this.prevTravel=this.travel;this.prevSpin=this.spin;this.rimCooldown=Math.max(0,this.rimCooldown-STEP);if(this.spinRemaining>0){const turn=Math.min(this.spinRemaining,Math.PI*2/.6*STEP);this.spin+=turn*this.spinDirection;this.spinRemaining-=turn;if(this.spinRemaining<1e-8){this.spin=Math.round(this.spin/(Math.PI*2))*Math.PI*2;this.spinRemaining=0;}}if(this.demo)tap=this.course.taps.has(this.tick);integrate(this,tap);if(tap)this.flapTime=.16;this.flapTime=Math.max(0,this.flapTime-STEP);this.noticeTime=Math.max(0,this.noticeTime-STEP);this.travel+=speed(this.passed)*STEP;this.tick++;
  if(this.y>H-24){this.lose('Putosit liian alas');return}
  const r=this.course.rings[this.passed];const x0=PX-(r.x-beforeTravel),x1=PX-(r.x-this.travel),y0=beforeY-ringY(r,time),y1=this.y-ringY(r,time+STEP);const hit=contact(r,x0,y0,x1,y1);
- if(hit==='rim'||hit==='miss'){this.lose(hit==='rim'?'Osuit renkaan reunaan':'Ohitit renkaan');return}
- if(hit){this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:PX,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
+ const impact=this.rimCooldown<=0?rimImpact(r,x0,y0,x1,y1):null;
+ if(impact){
+  if(!impact.grazing){this.lose('Osuit suoraan renkaan reunaan');return}
+  this.vy=Math.max(-280,Math.min(450,this.vy-1.15*impact.normalSpeed*impact.ny));
+  this.rimCooldown=.22;r.grazed=true;this.streak=0;
+  if(this.spinRemaining===0){this.spinDirection=impact.spinDirection;this.spinRemaining=Math.PI*2;}
+  this.notice='HIPAISU!';this.noticeTime=.65;
+  this.events.push({type:'graze',x:PX,y:this.y});
+ }
+ // A skim is allowed to overlap the decorative rim. The potato's centre must
+ // still cross INSIDE the opening, downward; touching never completes a ring.
+ const crossing=y0<-1e-7&&y1>=-1e-7&&y1>y0;
+ const crossX=crossing?x0+(x1-x0)*(-y0/(y1-y0)):Infinity;
+ let scored=hit==='perfect'||hit==='pass'?hit:null;
+ if(r.grazed&&crossing&&Math.abs(crossX)<r.half-5)scored='pass';
+ if(x1>r.half+18&&!scored){this.lose('Ohitit renkaan');return}
+ if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:PX,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
  }
  lose(reason){this.mode='over';this.reason=reason;this.events.push({type:'over'})}
 }

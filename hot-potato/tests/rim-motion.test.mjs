@@ -1,0 +1,16 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {Game,STEP,GRAVITY,rimImpact} from '../physics.mjs';
+import {smooth,poseWeights,renderState} from '../motion.mjs';
+function fixture({y=253,vy=-GRAVITY*STEP/2,x=199}={}){const g=new Game({test:true});g.y=g.prevY=y;g.vy=vy;Object.assign(g.course.rings[0],{x,base:275,amplitude:0});return g}
+test('shallow impacts above and below either rim are grazes',()=>{for(const sign of [-1,1])for(const edge of [-80,80]){const hit=rimImpact({half:80},edge-40,sign*22,edge+20,sign*22);assert.ok(hit.grazing);assert.ok(hit.incidence<.72)}});
+test('head-on impacts remain solid including swept fast movement',()=>{for(const edge of [-80,80])assert.equal(rimImpact({half:80},edge-40,0,edge+20,0).grazing,false);assert.equal(rimImpact({half:80},-80,-100,-80,100).grazing,false)});
+test('separating from an overlapping rim does not trigger a second hit',()=>assert.equal(rimImpact({half:80},-80,-22,-80,-30),null));
+test('grazing changes flight and starts rotation without scoring a ring',()=>{const g=fixture();g.streak=8;g.step();assert.equal(g.mode,'play');assert.equal(g.passed,0);assert.equal(g.score,0);assert.equal(g.streak,0);assert.equal(g.events[0].type,'graze');assert.ok(g.vy<0);assert.ok(g.spinRemaining>6);g.step();assert.ok(Math.abs(g.spin)>0)});
+test('shallow rim hit can be followed by a real top-down pass',()=>{const g=fixture();let grazes=0;for(let i=0;i<100&&g.passed===0&&g.mode==='play';i++){g.step();grazes+=g.events.filter(e=>e.type==='graze').length}assert.equal(g.mode,'play');assert.equal(g.passed,1);assert.equal(g.score,40);assert.equal(g.streak,0);assert.equal(grazes,1)});
+test('direct hit ends the run',()=>{const g=fixture({y:275,x:215});g.step();assert.equal(g.mode,'over');assert.equal(g.passed,0);assert.match(g.reason,/suoraan/)});
+test('grazing outside the aperture cannot award a pass',()=>{const g=fixture();g.course.rings[0].grazed=true;g.rimCooldown=1;g.course.rings[0].x=112-85;g.y=274;g.vy=240;g.step();assert.equal(g.passed,0);assert.equal(g.score,0)});
+test('complete rotation ends without a large visual reset',()=>{const g=fixture();g.step();let previous=g.spin;for(let i=0;i<74;i++){g.step();assert.ok(Math.abs(g.spin-previous)<.1);previous=g.spin}assert.equal(g.spinRemaining,0);assert.ok(Math.abs(Math.abs(g.spin)-Math.PI*2)<1e-9)});
+test('render position, world movement and spin interpolate the same tick',()=>{const result=renderState({prevY:200,y:204,prevTravel:50,travel:52,prevSpin:1,spin:1.1,tick:120},.5);assert.equal(result.y,202);assert.equal(result.travel,51);assert.equal(result.spin,1.05)});
+test('tilt smoothing has equal response at 60 and 120 Hz',()=>{const run=hz=>{let n=0;for(let i=0;i<hz;i++)n=smooth(n,1,1/hz);return n};assert.ok(Math.abs(run(60)-run(120))<1e-12)});
+test('pose weights stay normalized and switch gradually',()=>{const a=poseWeights([1,0,0,0],2,1/120);assert.ok(a[0]>0&&a[2]>0&&a[2]<.3);assert.ok(Math.abs(a.reduce((s,n)=>s+n,0)-1)<1e-12)});
+test('graze outcome is identical at 60 and 120 Hz',()=>{const run=hz=>{const g=fixture();let acc=0;for(let i=0;i<hz;i++){acc+=1/hz;while(acc+1e-10>=STEP){g.step();acc-=STEP}}return {passed:g.passed,y:g.y,vy:g.vy,spin:g.spin,score:g.score}};assert.deepEqual(run(60),run(120))});
