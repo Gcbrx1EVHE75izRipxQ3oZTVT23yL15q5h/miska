@@ -91,13 +91,13 @@ export class Game{
    // Resolve penetration at time of impact, then advance the remaining substep.
    this.x=r.x-(beforeTravel+forward*STEP*f)+touchX+this.vx*STEP*(1-f);
    this.y=ry0+(ry1-ry0)*f+touchY+this.vy*STEP*(1-f);
-   r.grazed=true;this.streak=0;
+   r.grazed=true;r.lastContactTick=this.tick;this.streak=0;
    scored=downwardGate(r,x0,y0,touchX,touchY);
    scored??=downwardGate(r,touchX,touchY,this.x-(r.x-this.travel),this.y-ry1);
    if(this.rimFeedback===0){this.rimFeedback=.12;this.notice='KIMMOKE!';this.noticeTime=.65;this.events.push({type:'graze',x:this.x,y:this.y});}
   }else scored=downwardGate(r,x0,y0,freeX,freeY);
   if(this.y>H-24){this.lose('Putosit liian alas');return}
-  if(this.x-(r.x-this.travel)>r.half+18&&!scored){this.lose('Ohitit renkaan');return}
+  if(this.x-(r.x-this.travel)>r.half+36&&!scored&&this.tick-(r.lastContactTick??-Infinity)>72){this.lose('Ohitit renkaan');return}
   if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:this.x,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
  }
 
