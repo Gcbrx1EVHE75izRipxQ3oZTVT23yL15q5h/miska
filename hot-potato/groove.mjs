@@ -18,19 +18,35 @@ export function grooveStep(index){
  if(melodyIndex>=0)events.push({instrument:'bell',note:tunes[bar][melodyIndex],duration:.3,gain:bar%2?.065:.085});
  return events;
 }
+const ease=t=>t*t*(3-2*t);
 export function dancePose(seconds){
- const beat=Math.max(0,seconds)/BEAT,phase=beat*Math.PI,alternating=Math.sin(phase);
- // Front-facing planted shuffle: one support foot stays down while the other
- // lifts inward. Squared half-waves give zero velocity at each foot plant.
- const left=Math.max(0,alternating)**2,right=Math.max(0,-alternating)**2;
- return {x:3*alternating,y:1.5*(1-Math.cos(phase*2)),lean:.02*alternating,
- leftSlide:5*left-2*right,rightSlide:-5*right+2*left,
- leftLift:8*left,rightLift:8*right,leftTurn:.075*Math.sin(phase*2),rightTurn:-.075*Math.sin(phase*2),
- wingLeft:-.1+.22*Math.sin(phase+.4),wingRight:-.1+.22*Math.sin(phase+1.1)};
+ const beat=Math.max(0,seconds)/BEAT,phase=beat*Math.PI;
+ // A running-man step has two distinct jobs: the weighted foot slides back
+ // ON the floor while the free knee comes up, swings forward and plants.
+ // Smoothly mix in a heel/toe T-step over an eight-beat phrase.
+ const shuffle=(1-Math.cos(beat*Math.PI/4))/2;
+ function leg(offset,side){
+  const u=((beat+offset)%2+2)%2,swing=u>=1,q=swing?u-1:u;
+  const lift=swing?19*Math.sin(Math.PI*q)**2:0;
+  const depth=swing?-13+26*ease(q):13-26*ease(q);
+  const swivel=Math.sin(phase*2),toe=side*shuffle*.26*swivel;
+  return {lift,depth,slide:side*shuffle*7*Math.sin(phase),
+   turn:side*(.035+shuffle*.13)*swivel,
+   yaw:toe+side*.08,pitch:swing?-.2*Math.sin(Math.PI*q):.12*Math.sin(Math.PI*q),
+   contact:!swing};
+ }
+ const l=leg(0,-1),r=leg(1,1);
+ return {travel:5*Math.sin(phase/2),x:3*Math.sin(phase),y:1.6*(1+Math.cos(phase*2)),lean:.025*Math.sin(phase),
+  leftSlide:l.slide,rightSlide:r.slide,leftLift:l.lift,rightLift:r.lift,
+  leftDepth:l.depth,rightDepth:r.depth,leftTurn:l.turn,rightTurn:r.turn,
+  leftYaw:l.yaw,rightYaw:r.yaw,leftPitch:l.pitch,rightPitch:r.pitch,
+  leftContact:l.contact,rightContact:r.contact,
+  wingLeft:-.1+.28*Math.sin(phase+.55),wingRight:-.1+.28*Math.sin(phase+Math.PI+.55),
+  headTurn:.025*Math.sin(phase-.4)};
 }
 export class MenuGroove{
  constructor(factory=()=>new (window.AudioContext||window.webkitAudioContext)()){
-  this.factory=factory;this.ctx=null;this.running=false;this.timer=null;this.sources=new Set();this.origin=0;this.next=0;this.generation=0;this.volume=.65;
+  this.factory=factory;this.ctx=null;this.running=false;this.timer=null;this.sources=new Set();this.origin=0;this.next=0;this.generation=0;this.volume=.65;this.beatOffset=()=>0;
  }
  get seconds(){return this.running&&this.ctx?Math.max(0,this.ctx.currentTime-this.origin):null}
  async start(){
@@ -39,7 +55,7 @@ export class MenuGroove{
    if(!this.ctx)this.init();
    // Set synchronously so a later stop (Play/hidden tab) cancels pending resume.
    this.running=true;const generation=++this.generation;await this.ctx.resume();if(!this.running||generation!==this.generation)return;
-   this.origin=this.ctx.currentTime+.035;this.next=0;
+   const offset=Math.max(0,this.beatOffset());this.origin=this.ctx.currentTime+.035-offset;this.next=Math.ceil(offset/(BEAT/4));
    this.master.gain.cancelScheduledValues(this.ctx.currentTime);this.master.gain.setValueAtTime(0,this.ctx.currentTime);this.master.gain.linearRampToValueAtTime(.55*this.volume,this.ctx.currentTime+.1);
    this.schedule();this.timer=setInterval(()=>this.schedule(),25);
   }catch{this.running=false;this.stop()}

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {BPM,BEAT,LOOP_STEPS,dancePose,grooveStep,MenuGroove,midiHz} from '../groove.mjs';
-test('dance loops continuously on the music meter without changing body proportions',()=>{for(let i=0;i<32;i++){const t=i*.075,a=dancePose(t),b=dancePose(t+BEAT*4);for(const key of Object.keys(a))assert.ok(Math.abs(a[key]-b[key])<1e-10);assert.ok(a.leftLift>=0&&a.rightLift>=0);assert.ok(a.leftLift*a.rightLift<1e-10);assert.ok(Math.abs(a.x)<=12);assert.ok(Math.abs(a.lean)<=.11)}});
+test('dance loops continuously on the music meter without changing body proportions',()=>{for(let i=0;i<32;i++){const t=i*.075,a=dancePose(t),b=dancePose(t+BEAT*8);for(const key of Object.keys(a))assert.ok(Math.abs(a[key]-b[key])<1e-10);assert.ok(a.leftLift>=0&&a.rightLift>=0);assert.ok(a.leftLift*a.rightLift<1e-10);assert.ok(Math.abs(a.x)<=12);assert.ok(Math.abs(a.lean)<=.06)}});
 test('original groove has a coherent repeating score with bass, chords, melody and backbeat',()=>{const totals={};for(let i=0;i<LOOP_STEPS;i++){assert.deepEqual(grooveStep(i),grooveStep(i+LOOP_STEPS));for(const e of grooveStep(i)){totals[e.instrument]=(totals[e.instrument]||0)+1;assert.ok(e.gain>0&&e.gain<1);if(e.note)assert.ok(midiHz(e.note)>30&&midiHz(e.note)<2000)}}assert.equal(totals.kick,32);assert.equal(totals.clap,16);assert.equal(totals.bass,40);assert.equal(totals.keys,96);assert.equal(totals.bell,32);assert.equal(BPM,108)});
 class FakeNode{constructor(){this.gain=this.frequency=this.delayTime=this.threshold=this.knee=this.ratio=this.attack=this.release={value:0,cancelScheduledValues(){},setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},setTargetAtTime(){}};this.stopped=false}connect(){}disconnect(){}start(){}stop(at){this.stopped=true;this.stopAt=at}}
 class FakeContext{constructor(){this.currentTime=0;this.sampleRate=100;this.destination=new FakeNode();this.nodes=[]}resume(){return Promise.resolve()}createGain(){return new FakeNode()}createDynamicsCompressor(){return new FakeNode()}createDelay(){return new FakeNode()}createBiquadFilter(){return new FakeNode()}createBufferSource(){let n=new FakeNode();this.nodes.push(n);return n}createOscillator(){let n=new FakeNode();this.nodes.push(n);return n}createBuffer(_,size){return{getChannelData:()=>new Float32Array(size)}}}
@@ -8,5 +8,18 @@ test('menu playback stops every source and never stacks timers on repeated start
 test('leaving menu before audio resume cannot start music during gameplay',async()=>{const ctx=new FakeContext();let finish;ctx.resume=()=>new Promise(r=>{finish=r});const m=new MenuGroove(()=>ctx),pending=m.start();m.stop();finish();await pending;assert.equal(m.running,false);assert.equal(m.timer,null);assert.equal(m.sources.size,0)});
 test('hidden-tab time jumps skip old notes instead of producing a burst',async()=>{const ctx=new FakeContext(),m=new MenuGroove(()=>ctx);await m.start();ctx.currentTime=60;m.schedule();assert.ok(m.next>400);assert.ok(m.sources.size<40);m.stop()});
 
-test('standing shuffle keeps a support foot planted and the torso upright',()=>{for(let i=0;i<480;i++){const p=dancePose(i/120);assert.ok(Math.min(p.leftLift,p.rightLift)<1e-12);assert.ok(Math.abs(p.lean)<=.02);assert.ok(Math.abs(p.x)<=3);assert.ok(Math.abs(p.leftTurn)<=.075);assert.ok(Math.abs(p.rightTurn)<=.075)}});
+test('standing shuffle keeps a support foot planted and the torso upright',()=>{for(let i=0;i<480;i++){const p=dancePose(i/120);assert.ok(Math.min(p.leftLift,p.rightLift)<1e-12);assert.ok(Math.abs(p.lean)<=.03);assert.ok(Math.abs(p.x)<=3);assert.ok(Math.abs(p.leftTurn)<=.18);assert.ok(Math.abs(p.rightTurn)<=.18)}});
 test('foot plants have continuous zero-speed vertical contact',()=>{const epsilon=1e-5;for(let beat=1;beat<8;beat++){const t=beat*BEAT,a=dancePose(t-epsilon),b=dancePose(t),c=dancePose(t+epsilon);for(const key of ['leftLift','rightLift']){assert.ok(Math.abs(a[key]-b[key])/epsilon<.01);assert.ok(Math.abs(c[key]-b[key])/epsilon<.01)}}});
+
+// A shuffle is a back-slide on one planted foot, not two feet bobbing together.
+test('running man has a sliding support foot and a separate forward recovery',()=>{
+ const a=dancePose(BEAT*.2),b=dancePose(BEAT*.7);
+ assert.equal(a.leftLift,0);assert.equal(b.leftLift,0);assert.ok(b.leftDepth<a.leftDepth);
+ assert.ok(a.rightLift>0&&b.rightLift>0);assert.ok(b.rightDepth>a.rightDepth);
+ for(let i=0;i<960;i++){const p=dancePose(i/120);assert.ok(p.leftContact||p.rightContact);assert.ok(Math.min(p.leftLift,p.rightLift)===0);assert.ok(p.leftLift<=19&&p.rightLift<=19)}
+});
+test('shuffle phrase and foot transforms have no position or speed discontinuity',()=>{
+ const eps=1e-5,keys=['x','y','travel','leftDepth','rightDepth','leftLift','rightLift','leftSlide','rightSlide','leftTurn','rightTurn'];
+ for(let beat=1;beat<=16;beat++){const at=beat*BEAT,a=dancePose(at-eps),b=dancePose(at),c=dancePose(at+eps);for(const k of keys){assert.ok(Math.abs(a[k]-c[k])<.003,k);assert.ok(Math.abs((b[k]-a[k])-(c[k]-b[k]))/eps<.02,k)}}
+});
+test('turning music on follows the existing dance phase instead of resetting the dancer',async()=>{const ctx=new FakeContext(),m=new MenuGroove(()=>ctx);m.beatOffset=()=>BEAT*3.5;await m.start();assert.ok(Math.abs(m.seconds-(BEAT*3.5-.035))<1e-10);assert.ok(m.next>=14);assert.ok(m.sources.size<25);m.stop()});
