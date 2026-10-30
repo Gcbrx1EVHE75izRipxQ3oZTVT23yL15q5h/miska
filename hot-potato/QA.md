@@ -2,6 +2,16 @@
 
 Production is `https://hot-potato-play.onrender.com`. The owner explicitly authorized the complete premium update, master merge and deployment to the existing service. Only `hot-potato/` changes are in scope. No new paid resources are authorized. The newest release notes below supersede historical implementation/approval descriptions.
 
+## Latest release — rightward window smash and lower course — 2026-10-30
+
+Supersedes the earlier 3.0 intro path and initial ring placement.
+
+- The kitchen is now a wide side-scrolling room. The potato runs right as the camera follows it, jumps through a closed side-window pane, breaks it and continues horizontally into flight. No shrinking into a background-wall window or full-screen crossfade. Cubic motion joins running speed to the jump and ends at the live game's 170 forward speed. The room has scrolled entirely out of view at handoff; the outdoor parallax phase continues.
+- Glass breaks once when the body's leading side reaches the pane. Thirty-two deterministic bounded fragments fly right, tumble and fall, then expire; surviving pieces continue into the first game frames. A short filtered-noise/glass tone cue uses the existing AudioContext, effect level/mute, cached noise and voice cleanup. Early flap presses are queued until flight instead of cutting the cinematic short. Skip/retry/practice/reduced motion and hidden-tab freezes remain.
+- Spawn and all witness routes move 110 units down (385 initial Y). The ceiling moves from 100 to 40, giving 345 units of climb above spawn rather than 175. Ring candidates start only after 300 fixed steps: first validated completion is approximately 3.9 seconds after flight starts, instead of approximately 1.4. Five 250-ring witness flights keep moving-ring heights approximately 302–423 and stay well below the ceiling. Body collisions and soft appendages, gravity 625, impulse −255, 120 Hz and speed 170→280 are retained.
+- Validation: 86 tests pass, including side-scroll direction/speed/pose continuity, leading-edge glass timing and bounded shards, one-shot shatter and fragment carryover, lower course/opening grace/headroom, shared-context glass audio/mute/cleanup. Five seeds × 250 PERFECT rings, 500-ring extension, world boundaries/jumps, 60/120 Hz, UI/audio/profiles and offline mobile projections remain checked. Browser/offline visual QA is recorded in the final delivery; physical iOS/Android and listening tests are not claimed.
+- Art: built-in image generation, new runtime `hot-potato/assets/kitchen-side.webp` (1536×1024). Prompt/brief: polished warm 3D cartoon cottage kitchen cutaway for horizontal side-scrolling; honey wood, cream plaster, teal cabinets and copper kitchenware on the left; empty walking lane; an exit window in the right side wall leading to cyan sky, clouds and distant floating islands; no people, potatoes, rings, lettering or UI. The runtime cuts out the aperture and supplies the closed glass, fragments and moving potato separately. Earlier `kitchen.webp` is retained in Git history/assets and no concept image crop is used.
+
 ## Latest release — kitchen launch and soft limbs — 2026-10-30
 
 This section supersedes the 2.1 full-character rigid hull and enlarged-ring notes below.
