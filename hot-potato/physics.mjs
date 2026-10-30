@@ -1,8 +1,8 @@
 import {SoftRig} from './soft-rig.mjs?v=3.0';
 import {rigHull,rimSeparation,sweepRig,RIM_TUBE,RIM_SKIN,RIG_RADIUS,rigCleared,updateTilt} from './rig-geometry.mjs?v=3.0';
-// Original prototype gravity 625 and tap -255. Requested quicker cadence: speed 170..280.
-export const STEP=1/120, GRAVITY=625, IMPULSE=-255, PX=112, W=400,H=650;
-export const SPAWN_Y=385,CEILING_Y=40,FIRST_RING_GRACE=300;
+// Ring Dive arcade tuning inspired by the supplied motion reference; no borrowed code.
+export const STEP=1/120, GRAVITY=980, IMPULSE=-360, PX=112, W=400,H=650;
+export const SPAWN_Y=385,CEILING_Y=40,FIRST_RING_GRACE=420;
 export const STARTS=[0,15,35,60,90];
 export const WORLDS=['TAIVAS','LUMOMETSÄ','KRISTALLILUOLA','TULIVUORI','AVARUUS'];
 export const tier=n=>n>=90?4:n>=60?3:n>=35?2:n>=15?1:0;
@@ -13,7 +13,7 @@ export function ringY(r,time){return r.base+Math.sin(time*r.frequency+r.phase)*r
 export function environment(n,progress=0){const t=tier(n),end=[15,35,60,90,Infinity][t];return{from:t,to:Math.min(4,t+1),blend:t===4?0:Math.max(0,Math.min(1,(n+progress-(end-3))/3))}}
 // Generate obstacles from a legal witness flight, using the exact runtime integrator.
 // This provides an attainable path, including moving-ring phases; it never teleports the pilot.
-const witnessDuration=(y,random)=>y>375?52+Math.floor(random*5):144+Math.floor(random*5);
+const witnessDuration=(y,random)=>y>375?44+Math.floor(random*5):124+Math.floor(random*5);
 export class Course{
  constructor(seed=42,count=60){this.seed=seed;this.rings=[];this.taps=new Set();this.p={y:SPAWN_Y,vy:0,tilt:0};this.tick=0;this.travel=0;this.nextTap=0;this.lastRing=-43;this.pending=null;this.history=[{tick:0,y:SPAWN_Y,travel:0,tilt:0}];this.extend(count)}
  random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296}
@@ -34,6 +34,7 @@ export class Course{
   const n=this.rings.length,t=tier(n);
   if((n>0||this.tick>=FIRST_RING_GRACE)&&this.travel-this.lastRing>=220&&this.p.vy>90&&this.p.y>295&&this.p.y<575){const amplitude=t<2?0:(t-1)*5+Math.min(6,Math.max(0,n-90)*.035),phase=this.random()*6.28,frequency=.9+Math.min(.3,n*.001),time=this.tick*STEP;
    const candidate={n,t,x:this.travel+PX,base:this.p.y-Math.sin(time*frequency+phase)*amplitude,amplitude,phase,frequency,half:[84,78,72,66,60][t]-Math.min(4,Math.max(0,n-90)*.012)};
+   if(candidate.base-candidate.amplitude<300||candidate.base+candidate.amplitude>470)continue;
    let valid=true;for(let j=1;j<this.history.length;j++){const a=this.history[j-1],b=this.history[j];if(sweepRig(candidate,a.travel-this.travel,a.y-ringY(candidate,a.tick*STEP),b.travel-this.travel,b.y-ringY(candidate,b.tick*STEP),a.tilt,b.tilt,.2)){valid=false;break}}
    if(valid)this.pending=candidate;
   }

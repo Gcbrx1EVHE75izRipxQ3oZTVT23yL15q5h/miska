@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {Game,Course,STEP,IMPULSE,GRAVITY,integrate,contact,tier,environment,multiplier,STARTS} from '../physics.mjs';
-test('original prototype gravity and impulse remain unchanged',()=>{assert.equal(IMPULSE,-255);assert.equal(GRAVITY,625);let p={y:275,vy:0};integrate(p,true);assert.equal(p.vy,-255+625/120);assert.ok(p.y<275);for(let i=0;i<60;i++)integrate(p);assert.ok(p.vy>0)});
+test('Ring Dive tap produces the tuned upward impulse followed by gravity',()=>{assert.equal(IMPULSE,-360);assert.equal(GRAVITY,980);let p={y:275,vy:0};integrate(p,true);assert.equal(p.vy,-360+980/120);assert.ok(p.y<275);for(let i=0;i<60;i++)integrate(p);assert.ok(p.vy>0)});
 test('top down center pass; upward never scores',()=>{const r={half:80};assert.equal(contact(r,0,-30,0,30),'perfect');assert.equal(contact(r,0,30,0,-30),null)});
 test('both rim edges and swept high speed collisions',()=>{for(const x of [-80,80])assert.equal(contact({half:80},x,-100,x,100),'rim');assert.equal(contact({half:80},-140,0,140,0),'rim')});
 test('ordinary pass is distinct from PERFECT',()=>assert.equal(contact({half:80},38,-35,38,35),'pass'));

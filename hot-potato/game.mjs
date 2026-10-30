@@ -1,9 +1,9 @@
-import {kitchenLayout,launchPose,LAUNCH_DURATION,runningLimbs,glassShards} from './launch.mjs?v=3.1';
-import {armPose} from './rig-geometry.mjs?v=3.1';
-import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs?v=3.1';
-import {smooth,renderState,cameraOffsetX} from './motion.mjs?v=3.1';
-import {dancePose,BEAT} from './groove.mjs?v=3.1';
-import {Sound} from './sound.mjs?v=3.1';
+import {kitchenLayout,launchPose,LAUNCH_DURATION,runningLimbs,glassShards} from './launch.mjs?v=3.2';
+import {armPose} from './rig-geometry.mjs?v=3.2';
+import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs?v=3.2';
+import {smooth,renderState,cameraOffsetX} from './motion.mjs?v=3.2';
+import {dancePose,BEAT} from './groove.mjs?v=3.2';
+import {Sound} from './sound.mjs?v=3.2';
 import {loadProfile,saveProfile,addRun,cleanName,ACHIEVEMENTS,unlockAchievements,leaderboardRows,weekStartUTC} from './profile.mjs?v=2.0';
 import {icon,mountIcons} from './icons.mjs?v=2.0';
 const $=s=>document.querySelector(s),canvas=$('#game'),c=canvas.getContext('2d',{alpha:false});

@@ -2,6 +2,15 @@
 
 Production is `https://hot-potato-play.onrender.com`. The owner explicitly authorized the complete premium update, master merge and deployment to the existing service. Only `hot-potato/` changes are in scope. No new paid resources are authorized. The newest release notes below supersede historical implementation/approval descriptions.
 
+## Latest release — Ring Dive motion tuning — 2026-10-30
+
+The user supplied a Flappy Dunk recording as a qualitative motion reference and explicitly authorized an original inspired implementation. This supersedes the earlier requirement to retain the original 625/−255 coefficients. No reference-game code, graphics, sounds or UI were used. Touch timings are not visible in the clip; these are independently selected Ring Dive values, not measured or claimed original-game constants.
+
+- Gravity 980 and one-tap velocity −360, fixed 120 Hz. Compared with 625/−255, a single tap rises roughly 65 rather than 51 simulation units and reaches its apex in about .36 rather than .40 seconds. Descent accelerates more strongly; tapping during descent immediately restores a predictable upward velocity without accumulating impulses.
+- Rebuilt the legal-input witness cadence around the new arc (short 44–48 and long 124–128 step intervals). Moving-ring bounds stay entirely within Y 300–470. Opening candidates wait at least 420 ticks, preserving a generous setup interval; subsequent routes use the quicker rise/dive rhythm. Existing speed 170–280, body/soft-limb collision geometry, nonfatal rebounds, upright recovery, PERFECT scoring and seamless worlds remain.
+- The same potato art, flexible arms/legs, kitchen shuffle, rightward glass-window exit, sounds, UI and profiles are retained. There are no reference-game flame trails or copied assets.
+- Validation: `node --test hot-potato/tests/*.test.mjs`; includes independent single-tap height/apex/descent checks, recovery without impulse stacking, five seeds × 250 PERFECT rings, 500-ring extension, all world boundaries, fixed 60/120 Hz outcomes for body/limbs, collision/score rules, opening grace, scene and audio lifecycle, and profile/practice exclusions. Browser checks and deploy identity are verified on delivery. Physical phone/real 120 Hz display and listening tests are not claimed.
+
 ## Latest release — rightward window smash and lower course — 2026-10-30
 
 Supersedes the earlier 3.0 intro path and initial ring placement.
