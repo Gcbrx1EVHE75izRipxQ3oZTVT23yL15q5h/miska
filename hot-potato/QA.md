@@ -1,6 +1,6 @@
-# RING DIVE — isolated review build
+# RING DIVE — QA and implementation history
 
-Production `https://hot-potato-play.onrender.com` must remain on master until the owner accepts this build. Only `hot-potato/` changes are in scope.
+Production is `https://hot-potato-play.onrender.com`. The owner explicitly authorized the complete premium update, master merge and deployment to the existing service. Only `hot-potato/` changes are in scope. No new paid resources are authorized. The newest release notes below supersede historical implementation/approval descriptions.
 
 ## Physics provenance
 Original Library artifact `HOT_POTATO_playable.html`, created 2026-10-29 21:27 UTC: `vy=-255`, `vy+=625*dt`, `speed=130+min(passed*2.5,95)`. These constants are restored. Simulation uses 120 fixed steps/second. Prototype 60Hz numerical integration differs by approximately one pixel at the apex; coefficients are unchanged.
@@ -21,8 +21,8 @@ Includes gravity/impulse, downward/upward crossing, both rims/high-speed sweep, 
 ## Browser QA
 Desktop Chrome and embedded 390×844 / 320×568 portrait viewports checked. Menus, world test selector, crystal replay and PERFECT UI inspected. These are desktop browser viewport checks, not physical iOS/Android device or real 120Hz screen measurements.
 
-## Review limits
-This is a 2.5D sprite game, not a real-time 3D scene. The character uses four sprite poses (happy, raised wings, downward flap with closed eyes, startled fall), with animated tilt/squash. It is frame animation rather than a skeletal 3D rig. The panorama crossfade and foreground parallax are implemented; the scenery itself is rendered imagery. A physical-phone performance/touch check and owner acceptance are required before replacing production. No advertising, payments, server leaderboard or app-store packaging is included in this browser scope.
+## Rendering and device limits
+This is a 2.5D Canvas sprite game. The rigid body, separate wings, connected legs and layered sneaker occlusion retain intrinsic asset proportions; no body squash/stretch is used. Panoramas, ring halves and atmosphere use layered parallax/crossfades. Physical iOS/Android audio, silent-switch, safe-area and 120 Hz display checks must be distinguished from automated simulation and offline checks. Historical notes below describe earlier iterations, not the current release's validation status.
 
 ## Rigid body and nonfatal rim contacts — 2026-10-30
 
@@ -77,3 +77,30 @@ Validation: 53 tests pass and JS syntax/diff checks pass. Twelve local character
 The previous clean-shoe fix still composited the entire opaque sneaker over the ankle, so its dark interior made the shoe appear empty. The dance rig now draws the shoe back/collar first, the continuous leg/ankle next, then the body, and finally only the foreground tongue/laces/toe portion of each shoe. This lets the ankle cover the rear rim/interior while its rounded end remains hidden by the front tongue. No detached flat-topped sprites are reintroduced. Flying rig and all simulation code are unchanged.
 
 Validation: JS syntax and diff checks pass. Eight local dance poses across both support legs and the running-man/heel-toe phrase were rendered from the actual drawing functions, including the source-rectangle foreground composite, and inspected for occupied collars and continuous ankles. This is local visual verification, not a new browser/device check.
+
+## Complete premium update — release 2.0 — 2026-10-30
+
+### Implemented
+- One consolidated CSS system: warm gold primary action, cyan/blue support colors, matching panels/buttons, original inline SVG icons, readable 13–16 px navigation/body text and 18–22 px main actions. Interactive controls are at least 44 px; checkbox labels provide the larger tap area. No store, currencies, subscriptions, ads or paid services.
+- A stage-led title screen: restrained saved pilot profile/settings, logo, the existing shuffle rig, one PELAA action, existing records, score/world/achievement navigation and readily available help/audio controls. Short nonblocking transitions and reduced-motion support.
+- A separate results screen with points, rings passed in this run, best PERFECT chain, reached world, genuine new-record states, immediately available retry, home and local leaderboard. The 0.65 s score count can be skipped. Practice retry retains its practice/world options.
+- Six persistent achievements: first pass, three PERFECTs, and world entries at passed counts 15/35/60/90 (the next ring is 16/36/61/91). Unlocks come from real pass events; test/demo flights cannot change achievements, statistics, records or history. Older profile-v2 data and best-score-v1 migrate compatibly. World gallery shows discoveries and the next target; practice worlds remain open.
+- An explicit browser-local leaderboard, sorted by score/rings/date, with recent-run highlight even when the run misses the top list. Monday 00:00 UTC is shared by local filtering and the dormant server, stated in the UI, and checked for rollover while an open weekly view is displayed. No fake competitors. API_URL remains empty and the UI performs no leaderboard network calls.
+- Distinct bounded visual/audio cues for flap, pass, PERFECT, multiplier, rim, world and records. Success messages and achievement toasts use the footer feedback area instead of covering the next ring. Camera response is less than a logical pixel and can be disabled. Particle count is capped at 100; ring halves and the character pose buffer remain cached. HUD text and progress/styles are written only when values change; notices are composed per event, not per rendered frame.
+- Original 108 BPM music and beat-aligned shuffle are unchanged. Saved independent volumes and mute use one gesture-unlocked AudioContext. Pause/hidden tabs cancel scheduled effects and music; first audio/return lifecycle is tested with audio doubles. No new recordings or external audio services.
+- Connected hips/knees/ankles and layered sneaker collars are retained for the entire shuffle and now also used in flight. One facial sprite is drawn at a time, eliminating crossfade ghost eyes. The original rigid body is never stretched. The complete fixed 400×650 simulation is fitted uniformly; clean scenery extends into spare screen area, so a tall screen does not crop the next ring.
+
+### Preserved exactly
+`physics.mjs`, `motion.mjs` and `groove.mjs` are byte-for-byte unchanged from master at task start. Gravity 625, impulse −255, 120 Hz integration, forward motion, horizontal rings, downward gate, nonfatal physical rim impulses, self-righting, PERFECT scoring and seamless five-world transitions remain intact.
+
+### Validation performed
+- `node --test --test-force-exit hot-potato/tests/*.test.mjs`: **65 passed, zero failed**.
+- Existing deterministic 60/120 Hz comparisons, world boundary/transition tests, five 250-ring witnesses and 500-ring endless continuation pass.
+- New tests cover exact achievement boundaries, profile migration/retention, real/test separation, latest run retention, Monday UTC rollover across DST/month/year, saved mute and background effect cancellation.
+- Application handlers are exercised with offline DOM/Canvas/audio doubles: all menus, real input replay to 16 rings and achievement unlocks, separate results, skip count, immediate retry, saved settings, local recent-run highlight, practice exclusion, first audio gesture, background pause/return and HUD write counts. This is logic testing, not an actual browser.
+- Projection tests at 320×568, 390×844, 430×932, 560×600 and 560×920 retain the whole simulation without anisotropic scale. These are mathematical/application tests with mocked bounds, not CSS layout or device verification.
+- Forty local character renders from the actual drawing functions were inspected: 32 poses across the eight-beat dance phrase and eight ascending/descending/tumbling/settled poses. A local Canvas-to-SVG adapter is used for inspection; this is not a browser screenshot.
+- JavaScript syntax, duplicate HTML IDs, local linked resources, CSS braces and git whitespace/scope checks pass.
+
+### Verification limits for this release
+Cloud browser access to the preview was rejected by automatic approval review because its selected review model was at capacity. No alternate browser/CDP or network workaround was attempted. Consequently **actual browser CSS layouts at 320/390/430 px, actual safe-area behavior, real device performance/audio, and interactive post-deploy browser checks are NOT verified**. The Render deploy/commit state and available static-source delivery can be checked independently; those must not be described as interactive browser/device tests. No physical iOS/Android or real 120 Hz screen test has been performed. The final handoff reports this limitation.

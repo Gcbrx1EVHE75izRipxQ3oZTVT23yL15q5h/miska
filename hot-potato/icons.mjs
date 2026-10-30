@@ -1,0 +1,8 @@
+const paths={
+ play:'M9 5 20 12 9 19Z',pause:'M8 5v14M16 5v14',settings:'M10 3h4l1 3 3 1 3 3v4l-3 1-1 3-3 3h-4l-1-3-3-1-3-3v-4l3-1 1-3Z M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0',
+ rank:'M8 4h8v6a4 4 0 0 1-8 0ZM8 6H4v3a4 4 0 0 0 4 4M16 6h4v3a4 4 0 0 1-4 4M12 14v5M8 21h8',world:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c-5 5-5 13 0 18 5-5 5-13 0-18',
+ medal:'M8 3 5 8l7 5 7-5-3-5M8 3l4 7 4-7M17 16a5 5 0 1 1-10 0 5 5 0 0 1 10 0',help:'M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3M12 18v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+ sound:'M4 9h4l5-4v14l-5-4H4ZM17 8c3 2 3 6 0 8M20 5c5 4 5 10 0 14',mute:'M4 9h4l5-4v14l-5-4H4ZM17 9l5 6M22 9l-5 6',close:'M6 6l12 12M18 6 6 18',back:'M14 5l-7 7 7 7M7 12h14',retry:'M5 9a8 8 0 1 1 0 7M5 3v6h6',ring:'M21 12a9 5 0 1 1-18 0 9 5 0 0 1 18 0ZM18 12a6 2.5 0 1 1-12 0 6 2.5 0 0 1 12 0',
+ bolt:'m14 2-9 12h6l-1 8 9-12h-6Z',cloud:'M7 18h11a4 4 0 0 0 0-8 6 6 0 0 0-11-2 5 5 0 0 0 0 10',leaf:'M20 3C8 2 3 8 5 15c7 6 17-1 15-12ZM5 20 17 7M10 14l-1-5M10 14l5 1',crystal:'m12 2 7 6-2 10-5 4-5-4L5 8Zm0 0-3 7 3 13 3-13Zm-7 6 4 1h6l4-1',volcano:'m3 20 6-12h6l6 12ZM9 8l3 4 3-4M10 4l-1-2M14 4l2-2',star:'m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z',check:'m5 12 5 5L20 7',lock:'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5ZM12 14v3',user:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-3a8 8 0 0 1 16 0v3'};
+export function icon(name,cls=''){return `<svg class="glyph ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]||paths.star}"/></svg>`}
+export function mountIcons(root=document){root.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon))}
