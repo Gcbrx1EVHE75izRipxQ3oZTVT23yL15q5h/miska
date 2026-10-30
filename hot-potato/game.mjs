@@ -1,9 +1,9 @@
-import {kitchenLayout,launchPose,LAUNCH_DURATION,runningLimbs,glassShards} from './launch.mjs?v=3.3';
-import {armPose} from './rig-geometry.mjs?v=3.3';
-import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs?v=3.3';
-import {smooth,renderState,cameraOffsetX,flightCamera,FLIGHT_ZOOM} from './motion.mjs?v=3.3';
-import {dancePose,BEAT} from './groove.mjs?v=3.3';
-import {Sound} from './sound.mjs?v=3.3';
+import {kitchenLayout,launchPose,LAUNCH_DURATION,runningLimbs,glassShards} from './launch.mjs?v=3.4';
+import {armPose} from './rig-geometry.mjs?v=3.4';
+import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs?v=3.4';
+import {smooth,renderState,cameraOffsetX,flightCamera,FLIGHT_ZOOM} from './motion.mjs?v=3.4';
+import {dancePose,BEAT} from './groove.mjs?v=3.4';
+import {Sound} from './sound.mjs?v=3.4';
 import {loadProfile,saveProfile,addRun,cleanName,ACHIEVEMENTS,unlockAchievements,leaderboardRows,weekStartUTC} from './profile.mjs?v=2.0';
 import {icon,mountIcons} from './icons.mjs?v=2.0';
 const $=s=>document.querySelector(s),canvas=$('#game'),c=canvas.getContext('2d',{alpha:false});
@@ -161,8 +161,8 @@ function toast(label,title,name='medal'){if(toastQueue.length<8)toastQueue.push(
 function updateToasts(){if(toastUntil&&time>=toastUntil){$('#toast').hidden=true;toastUntil=0}if(!toastUntil&&toastQueue.length&&(!noticeUntil||view!=='play')){const item=toastQueue.shift();text('#toastLabel',item.label);text('#toastTitle',item.title);$('#toastIcon').innerHTML=icon(item.name);$('#toast').hidden=false;toastUntil=time+2.3;}}
 function hud(force=false){if(!g)return;if(force)cache.clear();text('#rings',g.passed);text('#score',number(g.score));text('#mult','KERROIN ×'+multiplier(g.streak));const world=tier(g.passed);text('#world',WORLDS[world]);const key='stops';if(cache.get(key)!==world){document.querySelectorAll('.stops b').forEach((el,i)=>{el.classList.toggle('active',i<=world);el.style.setProperty('--color',colors[i])});cache.set(key,world)}const r=g.course.rings[g.passed],prev=g.course.rings[Math.max(0,g.passed-1)],progress=Math.max(0,Math.min(1,1-(r.x-g.travel-PX)/Math.max(1,r.x-prev.x))),percent=Math.min(100,Math.floor((g.passed+progress)/90*100));if(cache.get('journey')!==percent){$('#journeyFill').style.width=percent+'%';cache.set('journey',percent)}}
 function start(options={start:0,test:false,demo:false}){glassTrail=null;landscapeOffset=0;sound.stopEffects();sound.unlock();sound.effect('click');lastOptions={start:options.start||0,test:!!options.test,demo:!!options.demo};g=new Game({seed:seed++,...lastOptions});runBestStreak=0;pendingTap=false;acc=0;particles.length=0;pulses.length=0;visualTilt=0;surpriseMix=0;lastMultiplier=1;shake=0;result=null;toastQueue.length=0;$('#toast').hidden=true;toastUntil=0;flightZoom=profile.reduced?FLIGHT_ZOOM:1;setView('play');hud(true);}
-function beginLaunch(){if(view==='launch')return;if(profile.reduced){start();return;}sound.unlock();sound.effect('click');launch={elapsed:0,hero:{...hero},step:-1,jumped:false,shattered:false};g=null;setView('launch');$('#launchSkip').hidden=false;canvas.inert=false;canvas.focus({preventScroll:true});}
-function finishLaunch(){if(view!=='launch')return;const k=kitchenLayout(padX,padY,launch.hero),p=launchPose(launch.elapsed,launch.hero,k.window);const trail=launch.shattered?{window:k.window,age:p.impactAge,cameraX:p.cameraX}:null;const offset=p.externalTravel,queued=!!launch.tapQueued;launch=null;$('#launchSkip').hidden=true;start();glassTrail=trail;landscapeOffset=offset;pendingTap=queued;if(queued)sound.effect('tap');}
+function beginLaunch(options={start:0,test:false,demo:false}){if(view==='launch')return;if(view!=='menu')setView('menu');layoutHero();sound.stopEffects();sound.unlock();sound.effect('click');particles.length=0;pulses.length=0;glassTrail=null;toastQueue.length=0;$('#toast').hidden=true;toastUntil=0;launch={elapsed:0,hero:{...hero},options:{...options},step:-1,jumped:false,shattered:false};g=null;setView('launch');$('#launchSkip').hidden=false;canvas.inert=false;canvas.focus({preventScroll:true});}
+function finishLaunch(){if(view!=='launch')return;const k=kitchenLayout(padX,padY,launch.hero),p=launchPose(launch.elapsed,launch.hero,k.window);const trail=launch.shattered?{window:k.window,age:p.impactAge,cameraX:p.cameraX}:null;const offset=p.externalTravel,queued=!!launch.tapQueued,options=launch.options;launch=null;$('#launchSkip').hidden=true;start(options);glassTrail=trail;landscapeOffset=offset;pendingTap=queued;if(queued)sound.effect('tap');}
 $('#launchSkip').onclick=finishLaunch;
 function drawKitchen(cameraX=0){const im=assets['kitchen-side'];if(!im)return;const k=kitchenLayout(padX,padY,launch?.hero??hero),sx=k.w/im.width,sy=k.h/im.height;const region=(x,y,w,h)=>c.drawImage(im,x,y,w,h,k.x+x*sx-cameraX,k.y+y*sy,w*sx,h*sy);
  // The room art ends at the side wall. Its aperture is transparent to the same
@@ -193,10 +193,10 @@ mountIcons();canvas.inert=true;refreshProfile();updateSettings();save();
 for(const[id,name]of[['settingsOpen','settings'],['profileOpen','settings'],['leaderboardOpen','leaderboard'],['worldsOpen','worlds'],['achievementsOpen','achievements'],['helpOpen','help'],['resultBoard','leaderboard']])$('#'+id).onclick=()=>openPanel(name);
 document.querySelectorAll('.panel-close').forEach(b=>b.onclick=()=>{sound.effect('click');closePanel()});
 $('#allTime').onclick=()=>{weekOnly=false;renderBoard()};$('#thisWeek').onclick=()=>{weekOnly=true;renderBoard()};
-$('#play').onclick=()=>beginLaunch();$('#retry').onclick=()=>start(lastOptions);$('#skipCount').onclick=skipCount;
+$('#play').onclick=()=>beginLaunch();$('#retry').onclick=()=>beginLaunch(lastOptions);$('#skipCount').onclick=skipCount;
 $('#resultHome').onclick=$('#home').onclick=()=>{g=null;setView('menu')};$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>{sound.unlock();pause(false)};
 $('#labOpen').onclick=()=>setView('lab');$('#labClose').onclick=()=>{setView('menu');openPanel('worlds')};
-WORLDS.forEach((name,i)=>{const b=document.createElement('button');b.style.setProperty('--image',`url(assets/${names[i]}.webp)`);b.innerHTML=icon(worldIcons[i])+`<span>${name}</span><small>${STARTS[i]+1}${i===4?'+':'–'+[15,35,60,90][i]}</small>`;b.onclick=()=>start({start:STARTS[i],demo:$('#demo').checked,test:true});$('#worldButtons').append(b)});
+WORLDS.forEach((name,i)=>{const b=document.createElement('button');b.style.setProperty('--image',`url(assets/${names[i]}.webp)`);b.innerHTML=icon(worldIcons[i])+`<span>${name}</span><small>${STARTS[i]+1}${i===4?'+':'–'+[15,35,60,90][i]}</small>`;b.onclick=()=>beginLaunch({start:STARTS[i],demo:$('#demo').checked,test:true});$('#worldButtons').append(b)});
 $('#grazeTest').onclick=()=>{start({start:0,test:true,demo:false});g.y=g.prevY=253;g.vy=-2.6041666667;Object.assign(g.course.rings[0],{x:138+g.course.rings[0].half,base:275,amplitude:0})};
 $('#playerName').onchange=e=>{profile.name=cleanName(e.target.value);e.target.value=profile.name;save();refreshProfile()};
 for(const[id,key,out]of[['musicVolume','music','musicValue'],['effectsVolume','effects','effectsValue']]){const slider=$('#'+id);slider.onpointerdown=()=>sound.unlock();slider.oninput=()=>{profile[key]=Number(slider.value)/100;text('#'+out,slider.value+' %');save();sound.sync()};slider.onchange=()=>{sound.unlock();sound.effect('click')}}

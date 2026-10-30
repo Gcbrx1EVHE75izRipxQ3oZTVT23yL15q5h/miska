@@ -2,6 +2,12 @@
 
 Production is `https://hot-potato-play.onrender.com`. The owner explicitly authorized the complete premium update, master merge and deployment to the existing service. Only `hot-potato/` changes are in scope. No new paid resources are authorized. The newest release notes below supersede historical implementation/approval descriptions.
 
+## Latest release — every attempt starts in the kitchen (3.4) — 2026-10-30
+
+- Play, Retry and practice-world selection now use the same kitchen → rightward run → glass smash → flight launch. Retry preserves selected practice-world/demo options. The reduced-motion setting no longer automatically bypasses the kitchen; the explicit Ohita control remains available. This supersedes earlier immediate-retry and reduced-motion automatic-skip notes.
+- Retry recalculates the kitchen hero layout before launch, clears leftover particles/glass/toasts and stops old effect voices. Physics does not run or write results during the intro. Buffered flap input, hidden-tab freezing and duplicate-launch protection remain.
+- Validation: all 95 tests pass, including three consecutive real retries, intro timing and no extra recorded runs, buffered flap on retry, practice-world selection/retry and record exclusion, reduced-motion kitchen entry, mobile projections and the existing physics/audio/profile suite. Production version and Play/result/Retry entry are checked on delivery. No physical-phone or listening tests claimed.
+
 ## Latest release — quicker opening, clean dives and wider framing (3.3) — 2026-10-30
 
 - First-ring candidate grace is 180 rather than 420 fixed ticks. Five witness seeds complete the first ring at approximately 2.98–3.01 seconds instead of about 5.17 seconds. This is completion timing after flight begins, not time after pressing Play (the skippable kitchen intro is separate).
