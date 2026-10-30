@@ -1096,3 +1096,6 @@ footer button {
   top:calc(12px + var(--safe-top));
   right:5%
 }
+
+/* The kitchen-to-sky scene owns the canvas; this control remains optional. */
+.launch-skip{position:absolute;z-index:12;right:20px;bottom:calc(20px + var(--safe-bottom));min-width:88px;background:#132840d9}

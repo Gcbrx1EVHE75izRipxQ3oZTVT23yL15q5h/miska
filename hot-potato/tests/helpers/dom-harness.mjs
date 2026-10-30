@@ -1,5 +1,6 @@
 // Offline DOM/Canvas doubles for application-flow tests. No browser/network or layout engine.
 import fs from 'node:fs';import vm from 'node:vm';import path from 'node:path';import {fileURLToPath} from 'node:url';
+import * as launch from '../../launch.mjs';
 import * as rig from '../../rig-geometry.mjs';
 import * as physics from '../../physics.mjs';import * as motion from '../../motion.mjs';import * as groove from '../../groove.mjs';import * as profiles from '../../profile.mjs';import * as icons from '../../icons.mjs';import {Sound} from '../../sound.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
@@ -32,7 +33,7 @@ export async function harness({width=390,height=844,stored={}}={}){
  const data=new Map(Object.entries(stored)),localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};let callbacks=[],ms=0;
  const window={addEventListener(){}};
  class Image{constructor(){this.width=1000;this.height=1000}set src(value){if(!fs.existsSync(root+'/'+value))throw Error('Missing asset '+value);queueMicrotask(()=>this.onload())}}
- const errors=[];const context=vm.createContext({...rig,...physics,...motion,...groove,...profiles,...icons,Sound:OfflineSound,document,window,Image,localStorage,ResizeObserver:class{constructor(fn){this.fn=fn}observe(){this.fn()}},requestAnimationFrame:fn=>callbacks.push(fn),setInterval:()=>0,console:{error:(...v)=>errors.push(v.join(' '))},Date,Math});
+ const errors=[];const context=vm.createContext({...launch,...rig,...physics,...motion,...groove,...profiles,...icons,Sound:OfflineSound,document,window,Image,localStorage,ResizeObserver:class{constructor(fn){this.fn=fn}observe(){this.fn()}},requestAnimationFrame:fn=>callbacks.push(fn),setInterval:()=>0,console:{error:(...v)=>errors.push(v.join(' '))},Date,Math});
  const source=fs.readFileSync(root+'/game.mjs','utf8').replace(/^import .*;\n/gm,'').replace('mountIcons();','mountIcons(document);');vm.runInContext(source,context,{filename:'game.mjs'});for(let i=0;i<8;i++)await Promise.resolve();
  const read=code=>vm.runInContext(code,context),step=(dt=1000/120)=>{ms+=dt;const current=callbacks;callbacks=[];for(const cb of current)cb(ms)},click=async id=>{await document.querySelector('#'+id).click();for(let i=0;i<4;i++)await Promise.resolve()};
  return {document,read,step,click,data,errors,close(){read('sound.groove.stop();sound.stopEffects()')},advance(seconds){for(let i=0;i<seconds*120;i++)step()},tap(){read('tap()')}};
