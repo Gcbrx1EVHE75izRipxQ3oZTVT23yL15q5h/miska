@@ -100,18 +100,24 @@ function standingPotato(x,y,scale,dance){
   f.ay=f.y+f.scale*(-1+sn*(sx-pivot)+cs*(sy+1));
   return {im,w,h};
  }
+ // Shoe back/collar first, continuous ankle second, front tongue last.
+ for(const f of feet)foot(f,false);
  const bodyAngle=dance.lean+(dance.headTurn||0),cs=Math.cos(bodyAngle),sn=Math.sin(bodyAngle);
  for(const f of feet){shoeFrame(f);const hx=f.side*15,hy=16;
   const hipX=dance.x+cs*hx-sn*hy,hipY=dance.y+sn*hx+cs*hy;
   drawConnectedLeg(hipX,hipY,f.ax+f.side*(2+f.lift*.14),(hipY+f.ay)/2+3,f.ax,f.ay,8);
  }
- function foot(f){const {im,w,h}=shoeFrame(f);
+ function foot(f,frontOnly){const {im,w,h}=shoeFrame(f);
   c.save();c.translate(f.x,f.y);c.scale(f.scale,f.scale);
   c.translate(f.turn>0?7:-7,-1);c.rotate(f.turn);c.translate(f.turn>0?-7:7,1);
   c.transform(Math.cos(f.yaw),0,Math.sin(f.yaw)*.22,Math.cos(f.pitch),0,0);
-  c.drawImage(im,-w/2,-h,w,h);c.restore();
+  if(frontOnly){
+   // Keep the ankle visible over the dark opening/back rim, but hide its end
+   // behind the red tongue and laces. A whole opaque shoe hid the leg before.
+   const lip=.24;c.drawImage(im,0,im.height*lip,im.width,im.height*(1-lip),-w/2,-h*(1-lip),w,h*(1-lip));
+  }else c.drawImage(im,-w/2,-h,w,h);
+  c.restore();
  }
- for(const f of feet.filter(f=>f.depth<=0&&f.lift<=1))foot(f);
  c.save();c.translate(dance.x,dance.y);c.rotate(dance.lean);
  function arm(px,mirror,angle){const im=assets.wing,w=26,h=w*im.height/im.width;
   c.save();c.translate(px,-17);c.scale(mirror,1);c.rotate(angle);c.drawImage(im,-w*.9,-h*.65,w,h);c.restore();
@@ -119,7 +125,7 @@ function standingPotato(x,y,scale,dance){
  arm(-28,1,dance.wingLeft);arm(28,-1,dance.wingRight);
  const w=64,h=w*body.height/body.width;
  c.save();c.rotate(dance.headTurn||0);c.drawImage(body,-w/2,24-h,w,h);c.restore();
- c.restore();for(const f of feet.filter(f=>f.depth>0||f.lift>1))foot(f);
+ c.restore();for(const f of feet)foot(f,true);
  c.restore();
 }
 function puff(x,y,color,n=18){for(let i=0;i<n;i++){const a=i*2.399+time,v=20+(i%7)*12;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.65,max:.65,col:color,size:1+i%3})}if(particles.length>100)particles.splice(0,particles.length-100)}
