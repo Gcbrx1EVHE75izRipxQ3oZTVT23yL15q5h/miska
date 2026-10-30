@@ -4,7 +4,7 @@ import {MenuGroove,dancePose} from './groove.mjs';
 const $=s=>document.querySelector(s),canvas=$('#game'),c=canvas.getContext('2d',{alpha:false});const names=['sky','forest','crystal','volcano','space'],colors=['#ffda58','#6fffaf','#e8a0ff','#ff9b3f','#7eebff'];
 const assets={},particles=[];let g=null,paused=false,last=0,acc=0,time=0,menuTime=0,pendingTap=false,seed=42,best={rings:0,score:0},muted=false,audio=null,lastNotice='',frames=[],visualTilt=0,surpriseMix=0,renderTravel=0,renderTime=0;
 try{best=JSON.parse(localStorage.getItem('ring-dive-best-v1'))||best}catch{}function record(){$('#record').textContent=`PARAS · ${best.rings} RENGASTA · ${best.score.toLocaleString('fi-FI')} PISTETTÄ`}record();
-const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','shoe'].map(name=>new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
+const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','shoe','menu-body-front','menu-shoe-left','menu-shoe-right'].map(name=>new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
 const menuGroove=new MenuGroove();let musicEnabled=false;
 function syncMusic(){const on=musicEnabled&&!muted&&!document.hidden&&!document.querySelector('#menu').hidden;on?menuGroove.start():menuGroove.stop();document.querySelector('#menuMusic').textContent=musicEnabled&&!muted?'♫ MUSA PÄÄLLÄ':'♫ MUSA PÄÄLLE';document.querySelector('#menuMusic').setAttribute('aria-pressed',String(musicEnabled&&!muted));}
 const poseCanvas=document.createElement('canvas');poseCanvas.width=270;poseCanvas.height=240;const poseContext=poseCanvas.getContext('2d');
@@ -30,6 +30,26 @@ function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
  for(const [im,opacity] of [[happy,1-surpriseMix],[surprised,surpriseMix]]){if(!im||opacity<.002)continue;const w=240,h=w*im.height/im.width;poseContext.globalAlpha=opacity;poseContext.drawImage(im,(270-w)/2,(240-h)/2,w,h)}
  c.drawImage(poseCanvas,-40.5,-36,81,72);wing(-22,-3,32,1,0);c.restore();
 }
+// The title has its own upright rig. Flight sprites and shoe directions are
+// intentionally kept separate from the standing, front-facing dance pose.
+function standingPotato(x,y,scale,dance){
+ const body=assets['menu-body-front'];if(!body)return;
+ c.save();c.translate(x,y);c.scale(scale,scale);
+ c.fillStyle='#d9f5ff28';c.beginPath();c.ellipse(0,51,48,6,0,0,Math.PI*2);c.fill();
+ function foot(name,px,lift,turn){const im=assets[name],w=23,h=w*im.height/im.width;
+  c.save();c.translate(px,50-lift);c.rotate(turn);c.drawImage(im,-w/2,-h,w,h);c.restore();
+ }
+ // Shoes sit below the body, both toes face the camera; no side-view rotation.
+ foot('menu-shoe-left',-15+dance.leftSlide,dance.leftLift,dance.leftTurn);
+ foot('menu-shoe-right',15+dance.rightSlide,dance.rightLift,dance.rightTurn);
+ c.save();c.translate(dance.x,dance.y);c.rotate(dance.lean);
+ function arm(px,mirror,angle){const im=assets.wing,w=26,h=w*im.height/im.width;
+  c.save();c.translate(px,-17);c.scale(mirror,1);c.rotate(angle);c.drawImage(im,-w*.9,-h*.65,w,h);c.restore();
+ }
+ arm(-28,1,dance.wingLeft);arm(28,-1,dance.wingRight);
+ const w=64,h=w*body.height/body.width;c.drawImage(body,-w/2,24-h,w,h);
+ c.restore();c.restore();
+}
 function puff(x,y,color,n=18){for(let i=0;i<n;i++){const a=i*2.399+time,v=20+(i%7)*12;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.65,max:.65,col:color,size:1+i%3})}if(particles.length>100)particles.splice(0,particles.length-100)}
 function tone(type){if(muted)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();audio.resume();const o=audio.createOscillator(),v=audio.createGain();o.connect(v);v.connect(audio.destination);o.type=type==='graze'?'triangle':'sine';const t=audio.currentTime;o.frequency.setValueAtTime(type==='over'?180:type==='perfect'?740:type==='graze'?290:480,t);o.frequency.exponentialRampToValueAtTime(type==='over'?70:1100,t+.15);v.gain.setValueAtTime(.035,t);v.gain.exponentialRampToValueAtTime(.001,t+.18);o.start(t);o.stop(t+.2)}catch{}}
 function start(start=0,demo=false){g=new Game({seed:seed++,start,test:start>0||$('#lab').hidden===false,demo});paused=false;$('#pause').setAttribute('aria-label','Tauko');pendingTap=false;acc=0;particles.length=0;$('#menu').hidden=true;$('#pauseMenu').hidden=true;$('#lab').hidden=true;$('#hud').hidden=false;$('#journey').hidden=false;$('#testLabel').hidden=!g.test;$('#footer').hidden=false;lastNotice='';visualTilt=0;surpriseMix=0;syncMusic();hud()}
@@ -43,7 +63,7 @@ WORLDS.forEach((name,i)=>{const b=document.createElement('button');b.style.setPr
 function frame(ms){let dt=Math.min(.1,last?(ms-last)/1000:0);last=ms;time+=dt;c.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);c.clearRect(0,0,W,H);
 if(g?.mode==='play'&&!paused){acc+=dt;while(acc+1e-10>=STEP){g.step(pendingTap);pendingTap=false;acc-=STEP;for(const e of g.events){if(e.type==='over'){puff(g.x,g.y,'#fff0aa',28);end();break}puff(e.x??g.x,e.y??g.y,colors[tier(g.passed-1)],e.type==='graze'?8:22);tone(e.type)}if(g.mode==='over'){acc=0;break}}}
 const playing=g&&g.mode==='play',render=g?renderState(g,paused||g.mode!=='play'?1:acc/STEP):null,travel=render?render.travel:menuTime*15;renderTravel=travel;renderTime=render?render.time:time;if(!g)menuTime+=dt;let env={from:0,to:0,blend:0};if(g){const r=g.course.rings[g.passed],prev=g.course.rings[Math.max(0,g.passed-1)],p=Math.max(0,Math.min(1,1-(r.x-g.travel-PX)/Math.max(1,r.x-prev.x)));env=environment(g.passed,p)}backdrop(env.from,1,travel);if(env.blend)backdrop(env.to,env.blend,travel);
-if(g&&$('#menu').hidden){const visible=g.course.rings.slice(Math.max(0,g.passed-1),g.passed+4);for(const r of visible)ring(r,false);potato(render.x,render.y,g.vy,g.flapTime,1,paused?0:dt,render.spin,g.omega);for(const r of visible)ring(r,true)}else{const space=document.querySelector('.hero-space').getBoundingClientRect(),rect=document.querySelector('.shell').getBoundingClientRect(),unit=rect.height/H;const hy=(space.top-rect.top+space.height/2)/unit,dance=dancePose(menuGroove.seconds??time),size=Math.min(1.65,space.height/unit/100);c.save();c.translate(205,hy+36*size);c.fillStyle='#c8edff23';c.beginPath();c.ellipse(0,0,43*size,7*size,0,0,7);c.fill();c.restore();potato(205+dance.x,hy-4*size+dance.y,0,0,size,dt,0,0,dance)}
+if(g&&$('#menu').hidden){const visible=g.course.rings.slice(Math.max(0,g.passed-1),g.passed+4);for(const r of visible)ring(r,false);potato(render.x,render.y,g.vy,g.flapTime,1,paused?0:dt,render.spin,g.omega);for(const r of visible)ring(r,true)}else{const space=document.querySelector('.hero-space').getBoundingClientRect(),rect=document.querySelector('.shell').getBoundingClientRect(),unit=rect.height/H;const hy=(space.top-rect.top+space.height/2)/unit,dance=dancePose(menuGroove.seconds??time),size=Math.min(1.5,space.height/unit/125);standingPotato(200,hy+4*size,size,dance)}
 if(!paused){for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=55*dt}}for(let i=particles.length-1;i>=0;i--){const p=particles[i];if(p.life<=0){particles.splice(i,1);continue}c.globalAlpha=p.life/p.max;c.fillStyle=p.col;c.beginPath();c.arc(p.x,p.y,p.size,0,7);c.fill()}c.globalAlpha=1;if(playing)hud();if(dt>0){frames.push(dt);if(frames.length>180)frames.shift()}requestAnimationFrame(frame)}
 loading.then(()=>{$('#play').disabled=false;$('#play').textContent='PELAA';requestAnimationFrame(frame)}).catch(e=>{$('#message').textContent='Grafiikan lataus epäonnistui. Päivitä sivu.';console.error(e)});
 // Read-only inspection for QA; all test mode entry points visibly disable record writes.
