@@ -1,6 +1,7 @@
-import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs';
-import {smooth,renderState} from './motion.mjs';
-import {dancePose,BEAT} from './groove.mjs';
+import {armPose} from './rig-geometry.mjs?v=2.1';
+import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs?v=2.1';
+import {smooth,renderState,cameraOffsetX} from './motion.mjs?v=2.1';
+import {dancePose,BEAT} from './groove.mjs?v=2.1';
 import {Sound} from './sound.mjs?v=2.0';
 import {loadProfile,saveProfile,addRun,cleanName,ACHIEVEMENTS,unlockAchievements,leaderboardRows,weekStartUTC} from './profile.mjs?v=2.0';
 import {icon,mountIcons} from './icons.mjs?v=2.0';
@@ -19,12 +20,12 @@ const poseCanvas=document.createElement('canvas');poseCanvas.width=270;poseCanva
 const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','flight-shoe-clean','menu-body-front','dance-shoe-left','dance-shoe-right'].map(name=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
 const ringCache={};function ringImage(id,front){const key=id+'-'+front;if(ringCache[key])return ringCache[key];const cv=document.createElement('canvas');cv.width=240;cv.height=90;const q=cv.getContext('2d');q.translate(120,42);q.lineCap='round';const a=front?0:Math.PI,b=front?Math.PI:Math.PI*2;function line(w,color,dy=0,blur=0){q.lineWidth=w;q.strokeStyle=color;q.shadowColor=colors[id];q.shadowBlur=blur;q.beginPath();q.ellipse(0,dy,91,18,0,a,b);q.stroke()}
 line(14,colors[id],2,19);line(11,'#2b2837',5);let gr=q.createLinearGradient(0,-20,0,25);gr.addColorStop(0,'#fffad9');gr.addColorStop(.35,colors[id]);gr.addColorStop(.7,colors[id]);gr.addColorStop(1,'#9b6f36');line(10,gr);line(2.5,'#ffffee',-2);ringCache[key]=cv;return cv}
-function ring(r,front){const x=r.x-renderTravel,y=ringY(r,renderTime);if(x<-140||x>W+140)return;c.save();if(r.n<g.passed)c.globalAlpha=.5;const im=ringImage(r.t,front),scale=r.half/91;c.drawImage(im,x-120*scale,y-42*scale,240*scale,90*scale);if(!front&&r.n===g.passed){c.fillStyle='#fff';c.font='900 10px system-ui';c.textAlign='center';c.shadowColor='#092545';c.shadowBlur=5;c.fillText(String(r.n+1),x,y+43)}c.restore()}
-function backdrop(id,alpha,travel){if(alpha<=0)return;const im=assets[names[id]];if(!im)return;c.save();c.globalAlpha=alpha;const viewHeight=H+2*padY+4,scale=viewHeight/im.height,bw=im.width*scale;let offset=(travel*.09)%(2*bw);for(let tile=-1;tile<3;tile++){let x=tile*bw-offset;if(x+bw<-padX||x>W+padX)continue;c.save();if(Math.abs(tile)%2){c.translate(x+bw,0);c.scale(-1,1);c.drawImage(im,0,-padY-2,bw,viewHeight)}else c.drawImage(im,x,-padY-2,bw,viewHeight);c.restore()}
+function ring(r,front){const x=r.x-renderTravel,y=ringY(r,renderTime);if(x<-250||x>W+250)return;c.save();if(r.n<g.passed)c.globalAlpha=.5;const im=ringImage(r.t,front),scale=r.half/91;c.drawImage(im,x-120*scale,y-42*scale,240*scale,90*scale);if(!front&&r.n===g.passed){c.fillStyle='#fff';c.font='900 10px system-ui';c.textAlign='center';c.shadowColor='#092545';c.shadowBlur=5;c.fillText(String(r.n+1),x,y+43)}c.restore()}
+function backdrop(id,alpha,travel){if(alpha<=0)return;const im=assets[names[id]];if(!im)return;c.save();c.globalAlpha=alpha;const viewHeight=H+2*padY+4,scale=viewHeight/im.height,bw=im.width*scale;let offset=(travel*.028)%(2*bw);for(let tile=-1;tile<3;tile++){let x=tile*bw-offset;if(x+bw<-padX||x>W+padX)continue;c.save();if(Math.abs(tile)%2){c.translate(x+bw,0);c.scale(-1,1);c.drawImage(im,0,-padY-2,bw,viewHeight)}else c.drawImage(im,x,-padY-2,bw,viewHeight);c.restore()}
 const grad=c.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#081f4b45');grad.addColorStop(.28,'#11244b00');grad.addColorStop(.72,'#11244b00');grad.addColorStop(1,'#06162b55');c.fillStyle=grad;c.fillRect(-padX-2,-padY-2,W+2*padX+4,H+2*padY+4);
-const atlas=assets.props,sw=atlas.width/5;for(let j=0;j<4;j++){const depth=j%2?1.3:.8,loop=650,x=((j*203+580-travel*.27*depth)%loop+loop)%loop-120,y=j%2?500:560;const size=(j%2?135:100);c.globalAlpha=alpha*(j%2?.85:.55);c.drawImage(atlas,id*sw,0,sw,atlas.height,x,y+Math.sin(time*.5+j)*9,size,size*atlas.height/sw)}
+const atlas=assets.props,sw=atlas.width/5;for(let j=0;j<4;j++){const depth=j%2?1.3:.8,loop=650,x=((j*203+580-travel*.085*depth)%loop+loop)%loop-120,y=j%2?500:560;const size=(j%2?135:100);c.globalAlpha=alpha*(j%2?.85:.55);c.drawImage(atlas,id*sw,0,sw,atlas.height,x,y+Math.sin(time*.5+j)*9,size,size*atlas.height/sw)}
 // Separate atmosphere layer: drifting mist / fireflies / crystal motes / embers / starlight.
-c.globalCompositeOperation='screen';for(let j=0;j<22;j++){const x=((j*71.31-travel*(.06+j%3*.035))%W+W)%W,y=(j*89.7+Math.sin(time*.65+j)*17)%H,sz=id===0?22:id===4?1:1.6;c.globalAlpha=alpha*(id===0?.08:.15+.28*(.5+.5*Math.sin(time+j)));c.fillStyle=id===0?'#fff':colors[id];c.beginPath();c.arc(x,y,sz,0,7);c.fill()}c.restore()}
+c.globalCompositeOperation='screen';for(let j=0;j<22;j++){const x=((j*71.31-travel*(.02+j%3*.012))%W+W)%W,y=(j*89.7+Math.sin(time*.65+j)*17)%H,sz=id===0?22:id===4?1:1.6;c.globalAlpha=alpha*(id===0?.08:.15+.28*(.5+.5*Math.sin(time+j)));c.fillStyle=id===0?'#fff':colors[id];c.beginPath();c.arc(x,y,sz,0,7);c.fill()}c.restore()}
 // Rounded limbs always begin inside the body and end inside a shoe collar.
 // They are rendered behind the body so a detached flat top can never show.
 function drawConnectedLeg(hx,hy,kx,ky,ax,ay,width){
@@ -32,9 +33,16 @@ function drawConnectedLeg(hx,hy,kx,ky,ax,ay,width){
  c.save();c.strokeStyle=skin;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';
  c.beginPath();c.moveTo(hx,hy);c.quadraticCurveTo(kx,ky,ax,ay);c.stroke();c.restore();
 }
-function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
+function drawArm(p,side){
+ drawConnectedLeg(p.hx,p.hy,p.kx,p.ky,p.ax,p.ay,6.5);
+ // Rounded mitten, thumb and knuckle highlights share the exact wrist anchor.
+ c.save();c.translate(p.ax,p.ay);c.rotate(side*.22);
+ const light=c.createRadialGradient(-2,-3,1,0,0,7);light.addColorStop(0,'#ffe2a0');light.addColorStop(.55,'#dfa556');light.addColorStop(1,'#a65b2c');
+ c.fillStyle=light;c.beginPath();c.ellipse(0,0,5.3,6.4,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(-side*4,-1,2.2,3.2,side*.4,0,Math.PI*2);c.fill();c.restore();
+}
+function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null,bodyTilt=null){
  const happy=assets['body-happy'],surprised=assets['body-surprised'];if(!happy)return;
- visualTilt=smooth(visualTilt,Math.max(-.2,Math.min(.32,vy/950)),dt,10);
+ visualTilt=bodyTilt??smooth(visualTilt,Math.max(-.2,Math.min(.32,vy/950)),dt,10);
  surpriseMix=smooth(surpriseMix,Math.abs(omega)>2.4||vy>230?1:0,dt,12);
  // The body is rigid: only uniform scaling is used. Each source keeps its aspect.
  c.save();c.translate(x,y);c.rotate(visualTilt+spin+(dance?.lean||0));c.scale(scale,scale);
@@ -53,11 +61,12 @@ function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
  wing(25,-4,22,-1,1.4);
  const farFoot=hangingLeg(-20,15,23,1.8),nearFoot=hangingLeg(-3,19,25,0);
  farFoot.back();nearFoot.back();farFoot.leg();nearFoot.leg();
+ drawArm(armPose(-1,clock*5,true),-1);
  // One facial pose at a time: crossfading two full faces caused ghost eyes.
  poseContext.clearRect(0,0,270,240);poseContext.globalCompositeOperation='source-over';poseContext.globalAlpha=1;
  const expression=surpriseMix>.55?surprised:happy,w=240,h=w*expression.height/expression.width;
  poseContext.drawImage(expression,(270-w)/2,(240-h)/2,w,h);
- c.drawImage(poseCanvas,-40.5,-36,81,72);farFoot.front();nearFoot.front();wing(-22,-3,32,1,0);c.restore();
+ c.drawImage(poseCanvas,-40.5,-36,81,72);farFoot.front();nearFoot.front();drawArm(armPose(1,clock*5,true),1);wing(-22,-3,32,1,0);c.restore();
 }
 // The title has its own upright rig. Flight sprites and shoe directions are
 // intentionally kept separate from the standing, front-facing dance pose.
@@ -73,7 +82,7 @@ function standingPotato(x,y,scale,dance){
  const feet=[{name:'dance-shoe-left',side:-1,slide:dance.leftSlide,lift:dance.leftLift,depth:dance.leftDepth,turn:dance.leftTurn,yaw:dance.leftYaw,pitch:dance.leftPitch},
  {name:'dance-shoe-right',side:1,slide:dance.rightSlide,lift:dance.rightLift,depth:dance.rightDepth,turn:dance.rightTurn,yaw:dance.rightYaw,pitch:dance.rightPitch}];
  for(const f of feet){f.x=f.side*15+f.slide;f.y=52+f.depth*.3-f.lift;f.scale=1+f.depth*.006;
-  c.fillStyle=`rgba(8,26,42,${.26*(1-f.lift/24)})`;c.beginPath();c.ellipse(f.x,53+f.depth*.3,12*f.scale,2.2+f.lift*.05,0,0,Math.PI*2);c.fill();
+  c.fillStyle=`rgba(8,26,42,${.26*(1-Math.min(1,f.lift/32))})`;c.beginPath();c.ellipse(f.x,53+f.depth*.3,12*f.scale,2.2+f.lift*.05,0,0,Math.PI*2);c.fill();
  }
  function shoeFrame(f){const im=assets[f.name],w=23,h=w*im.height/im.width;
   const pivot=f.turn>0?7:-7,cs=Math.cos(f.turn),sn=Math.sin(f.turn);
@@ -107,6 +116,7 @@ function standingPotato(x,y,scale,dance){
   c.save();c.translate(px,-17);c.scale(mirror,1);c.rotate(angle);c.drawImage(im,-w*.9,-h*.65,w,h);c.restore();
  }
  arm(-28,1,dance.wingLeft);arm(28,-1,dance.wingRight);
+ drawArm(armPose(-1,dance.armPhase),-1);drawArm(armPose(1,dance.armPhase),1);
  const w=64,h=w*body.height/body.width;
  c.save();c.rotate(dance.headTurn||0);c.drawImage(body,-w/2,24-h,w,h);c.restore();
  c.restore();for(const f of feet)foot(f,true);
@@ -184,10 +194,11 @@ function frame(ms){const dt=Math.min(.1,last?(ms-last)/1000:0);last=ms;time+=dt;
  c.setTransform(2,0,0,2,padX*2,padY*2);c.clearRect(-padX,-padY,W+2*padX,H+2*padY);c.save();shake=Math.max(0,shake-dt);if(shake&&!profile.reduced)c.translate(Math.sin(time*85)*shake*7,Math.cos(time*73)*shake*4);
  const render=g?renderState(g,paused||g.mode!=='play'?1:acc/STEP):null;renderTravel=render?render.travel:time*15;renderTime=render?render.time:time;
  let env={from:0,to:0,blend:0};if(g){const r=g.course.rings[g.passed],prev=g.course.rings[Math.max(0,g.passed-1)],p=Math.max(0,Math.min(1,1-(r.x-g.travel-PX)/Math.max(1,r.x-prev.x)));env=environment(g.passed,p)}backdrop(env.from,1,renderTravel);if(env.blend)backdrop(env.to,env.blend,renderTravel);
- if(view==='play'&&g){const visible=g.course.rings.slice(Math.max(0,g.passed-1),g.passed+4);for(const r of visible)ring(r,false);potato(render.x,render.y,g.vy,g.flapTime,1,paused?0:dt,render.spin,g.omega);for(const r of visible)ring(r,true)}else if(view==='menu'){const dance=dancePose(profile.reduced?0:menuGroove.seconds??time);standingPotato(hero.x,hero.y,hero.size,dance)}
+ if(view==='play'&&g){c.save();c.translate(cameraOffsetX(render.x,W),0);const visible=g.course.rings.slice(Math.max(0,g.passed-1),g.passed+4);for(const r of visible)ring(r,false);potato(render.x,render.y,g.vy,g.flapTime,1,paused?0:dt,render.spin,g.omega,null,render.tilt);for(const r of visible)ring(r,true);c.restore()}else if(view==='menu'){const dance=dancePose(profile.reduced?0:menuGroove.seconds??time);standingPotato(hero.x,hero.y,hero.size,dance)}
  if(!paused){for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=55*dt}for(const p of pulses)p.life-=dt}
+ if(view==='play'&&render){c.save();c.translate(cameraOffsetX(render.x,W),0)}
  for(let i=pulses.length-1;i>=0;i--){const p=pulses[i];if(p.life<=0){pulses.splice(i,1);continue}if(view!=='play')continue;const ratio=1-p.life/p.max;c.save();c.globalAlpha=(p.life/p.max)*.55;c.strokeStyle=colors[p.ring.t];c.lineWidth=2;c.beginPath();c.ellipse(p.ring.x-renderTravel,ringY(p.ring,renderTime),p.ring.half+ratio*18,18+ratio*8,0,0,7);c.stroke();c.restore()}
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];if(p.life<=0){particles.splice(i,1);continue}c.globalAlpha=p.life/p.max;c.fillStyle=p.col;c.beginPath();c.arc(p.x,p.y,p.size,0,7);c.fill()}c.globalAlpha=1;c.restore();
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];if(p.life<=0){particles.splice(i,1);continue}c.globalAlpha=p.life/p.max;c.fillStyle=p.col;c.beginPath();c.arc(p.x,p.y,p.size,0,7);c.fill()}c.globalAlpha=1;if(view==='play'&&render)c.restore();c.restore();
  if(noticeUntil&&time>=noticeUntil){$('#notice').hidden=true;noticeUntil=0}updateToasts();const active=!!noticeUntil||!!toastUntil;if(cache.get('feedback')!==active){$('#shell').classList.toggle('feedback-active',active);cache.set('feedback',active)}if(view==='results'&&result&&!countDone){countElapsed+=dt;const t=Math.min(1,countElapsed/.65);displayCount(result.score*(1-(1-t)**3));if(t===1)skipCount()}
  requestAnimationFrame(frame);
 }

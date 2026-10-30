@@ -20,29 +20,29 @@ export function grooveStep(index){
 }
 const ease=t=>t*t*(3-2*t);
 export function dancePose(seconds){
- const beat=Math.max(0,seconds)/BEAT,phase=beat*Math.PI;
+ const clock=Math.max(0,seconds)/BEAT,beat=clock+.10*Math.sin(clock*Math.PI*2),phase=beat*Math.PI;
  // A running-man step has two distinct jobs: the weighted foot slides back
  // ON the floor while the free knee comes up, swings forward and plants.
  // Smoothly mix in a heel/toe T-step over an eight-beat phrase.
  const shuffle=(1-Math.cos(beat*Math.PI/4))/2;
  function leg(offset,side){
   const u=((beat+offset)%2+2)%2,swing=u>=1,q=swing?u-1:u;
-  const lift=swing?19*Math.sin(Math.PI*q)**2:0;
+  const lift=swing?29*Math.sin(Math.PI*q)**4:0;
   const depth=swing?-13+26*ease(q):13-26*ease(q);
-  const swivel=Math.sin(phase*2),toe=side*shuffle*.26*swivel;
-  return {lift,depth,slide:side*shuffle*7*Math.sin(phase),
-   turn:side*(.035+shuffle*.13)*swivel,
-   yaw:toe+side*.08,pitch:swing?-.2*Math.sin(Math.PI*q):.12*Math.sin(Math.PI*q),
+  const swivel=Math.sin(phase*2),toe=side*shuffle*.38*swivel;
+  return {lift,depth,slide:side*(3+shuffle*10)*Math.sin(phase),
+   turn:side*(.045+shuffle*.19)*swivel,
+   yaw:toe+side*.08,pitch:swing?-.28*Math.sin(Math.PI*q):.12*Math.sin(Math.PI*q),
    contact:!swing};
  }
  const l=leg(0,-1),r=leg(1,1);
- return {travel:5*Math.sin(phase/2),x:3*Math.sin(phase),y:1.6*(1+Math.cos(phase*2)),lean:.025*Math.sin(phase),
+ return {armPhase:Math.sin(phase)*.65+Math.sin(phase*.5)*.35,travel:12*Math.sin(phase/2),x:4*Math.sin(phase),y:2*(1+Math.cos(phase*2))+4*shuffle**4,lean:.04*Math.sin(phase),
   leftSlide:l.slide,rightSlide:r.slide,leftLift:l.lift,rightLift:r.lift,
   leftDepth:l.depth,rightDepth:r.depth,leftTurn:l.turn,rightTurn:r.turn,
   leftYaw:l.yaw,rightYaw:r.yaw,leftPitch:l.pitch,rightPitch:r.pitch,
   leftContact:l.contact,rightContact:r.contact,
-  wingLeft:-.1+.28*Math.sin(phase+.55),wingRight:-.1+.28*Math.sin(phase+Math.PI+.55),
-  headTurn:.025*Math.sin(phase-.4)};
+  wingLeft:-.12+.42*Math.sin(phase+.55),wingRight:-.12+.42*Math.sin(phase+Math.PI+.55),
+  headTurn:.035*Math.sin(phase-.4)};
 }
 export class MenuGroove{
  constructor(factory=()=>new (window.AudioContext||window.webkitAudioContext)()){
