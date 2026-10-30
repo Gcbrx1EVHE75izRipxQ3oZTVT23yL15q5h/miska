@@ -2,19 +2,20 @@ import {SoftRig} from './soft-rig.mjs?v=3.0';
 import {rigHull,rimSeparation,sweepRig,RIM_TUBE,RIM_SKIN,RIG_RADIUS,rigCleared,updateTilt} from './rig-geometry.mjs?v=3.0';
 // Original prototype gravity 625 and tap -255. Requested quicker cadence: speed 170..280.
 export const STEP=1/120, GRAVITY=625, IMPULSE=-255, PX=112, W=400,H=650;
+export const SPAWN_Y=385,CEILING_Y=40,FIRST_RING_GRACE=300;
 export const STARTS=[0,15,35,60,90];
 export const WORLDS=['TAIVAS','LUMOMETSÄ','KRISTALLILUOLA','TULIVUORI','AVARUUS'];
 export const tier=n=>n>=90?4:n>=60?3:n>=35?2:n>=15?1:0;
 export const speed=n=>170+Math.min(n*2.5,110);
 export const multiplier=n=>1+Math.min(4,Math.floor(n/3));
-export function integrate(p,tap=false){if(tap)p.vy=IMPULSE;p.vy+=GRAVITY*STEP;p.y+=p.vy*STEP;if(p.y<100){p.y=100;p.vy=Math.max(0,p.vy)}}
+export function integrate(p,tap=false){if(tap)p.vy=IMPULSE;p.vy+=GRAVITY*STEP;p.y+=p.vy*STEP;if(p.y<CEILING_Y){p.y=CEILING_Y;p.vy=Math.max(0,p.vy)}}
 export function ringY(r,time){return r.base+Math.sin(time*r.frequency+r.phase)*r.amplitude}
 export function environment(n,progress=0){const t=tier(n),end=[15,35,60,90,Infinity][t];return{from:t,to:Math.min(4,t+1),blend:t===4?0:Math.max(0,Math.min(1,(n+progress-(end-3))/3))}}
 // Generate obstacles from a legal witness flight, using the exact runtime integrator.
 // This provides an attainable path, including moving-ring phases; it never teleports the pilot.
-const witnessDuration=(y,random)=>y>265?52+Math.floor(random*5):144+Math.floor(random*5);
+const witnessDuration=(y,random)=>y>375?52+Math.floor(random*5):144+Math.floor(random*5);
 export class Course{
- constructor(seed=42,count=60){this.seed=seed;this.rings=[];this.taps=new Set();this.p={y:275,vy:0,tilt:0};this.tick=0;this.travel=0;this.nextTap=0;this.lastRing=-43;this.pending=null;this.history=[{tick:0,y:275,travel:0,tilt:0}];this.extend(count)}
+ constructor(seed=42,count=60){this.seed=seed;this.rings=[];this.taps=new Set();this.p={y:SPAWN_Y,vy:0,tilt:0};this.tick=0;this.travel=0;this.nextTap=0;this.lastRing=-43;this.pending=null;this.history=[{tick:0,y:SPAWN_Y,travel:0,tilt:0}];this.extend(count)}
  random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296}
  futureClear(r){
   const p={...this.p};let tick=this.tick,travel=this.travel,next=this.nextTap,seed=this.seed;
@@ -31,7 +32,7 @@ export class Course{
    if(rigCleared(r,x1,y1,this.p.tilt)){if(this.futureClear(r)){r.witnessTick=this.tick;r.witnessY=this.p.y;this.rings.push(r);this.lastRing=r.x-PX}this.pending=null}continue;
   }
   const n=this.rings.length,t=tier(n);
-  if(this.travel-this.lastRing>=220&&this.p.vy>90&&this.p.y>185&&this.p.y<465){const amplitude=t<2?0:(t-1)*5+Math.min(6,Math.max(0,n-90)*.035),phase=this.random()*6.28,frequency=.9+Math.min(.3,n*.001),time=this.tick*STEP;
+  if((n>0||this.tick>=FIRST_RING_GRACE)&&this.travel-this.lastRing>=220&&this.p.vy>90&&this.p.y>295&&this.p.y<575){const amplitude=t<2?0:(t-1)*5+Math.min(6,Math.max(0,n-90)*.035),phase=this.random()*6.28,frequency=.9+Math.min(.3,n*.001),time=this.tick*STEP;
    const candidate={n,t,x:this.travel+PX,base:this.p.y-Math.sin(time*frequency+phase)*amplitude,amplitude,phase,frequency,half:[84,78,72,66,60][t]-Math.min(4,Math.max(0,n-90)*.012)};
    let valid=true;for(let j=1;j<this.history.length;j++){const a=this.history[j-1],b=this.history[j];if(sweepRig(candidate,a.travel-this.travel,a.y-ringY(candidate,a.tick*STEP),b.travel-this.travel,b.y-ringY(candidate,b.tick*STEP),a.tilt,b.tilt,.2)){valid=false;break}}
    if(valid)this.pending=candidate;
@@ -102,7 +103,7 @@ export function settleRotation(body,age){
  body.spin+=body.omega*STEP;
 }
 export class Game{
- constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.tilt=0;this.prevTilt=0;this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.omega=0;this.x=PX;this.prevX=PX;this.vx=0;this.rimFeedback=0;this.lastImpactTick=0;this.start=start;this.limbs=new SoftRig(); if(start){this.course.extend(Math.max(60,start+2));const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
+ constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=SPAWN_Y;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.tilt=0;this.prevTilt=0;this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.omega=0;this.x=PX;this.prevX=PX;this.vx=0;this.rimFeedback=0;this.lastImpactTick=0;this.start=start;this.limbs=new SoftRig(); if(start){this.course.extend(Math.max(60,start+2));const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
  step(tap=false){
   if(this.mode!=='play')return;this.events=[];
   const beforeY=this.y,beforeX=this.x,beforeTravel=this.travel,time=this.tick*STEP;
