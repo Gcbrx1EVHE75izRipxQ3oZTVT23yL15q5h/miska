@@ -5,7 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {Game} from './physics.mjs';
-import {cleanName} from './profile.mjs';
+import {cleanName,weekStartUTC} from './profile.mjs';
 export function verifyReplay({seed,ticks,taps,rings,score,test}){
  if(test||!Number.isInteger(seed)||!Number.isInteger(ticks)||ticks<1||ticks>72000||!Array.isArray(taps)||taps.length>15000||!Number.isInteger(rings)||rings<0||!Number.isInteger(score)||score<0)throw Error('Virheellinen suoritus');
  let prev=-1;for(const tap of taps){if(!Number.isInteger(tap)||tap<=prev||tap>=ticks)throw Error('Virheellinen ohjaustieto');prev=tap}
@@ -26,7 +26,7 @@ export function createLeaderboard({dbPath=':memory:',origin='https://hot-potato-
   const ip=req.socket.remoteAddress;let rate=rates.get(ip);if(!rate||now-rate.start>60000){rate={start:now,n:0};rates.set(ip,rate)}if(++rate.n>90){send(429,{error:'Odota hetki ja yritä uudelleen.'});return}if(rates.size>10000)for(const [key,r]of rates)if(now-r.start>60000)rates.delete(key);
   try{
    if(req.method==='GET'&&url.pathname==='/scores'){
-    let since=0;if(url.searchParams.get('period')==='week'){const d=new Date(now);d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));since=+d}
+    let since=0;if(url.searchParams.get('period')==='week'){since=weekStartUTC(now)}
     const rows=db.prepare(`SELECT name,rings,score,at FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY player ORDER BY score DESC,rings DESC,at ASC) rn FROM scores WHERE at>=?) WHERE rn=1 ORDER BY score DESC,rings DESC,at ASC LIMIT 50`).all(since);send(200,{rows});return;
    }
    if(req.method!=='POST'){send(404,{error:'Ei löydy'});return}
