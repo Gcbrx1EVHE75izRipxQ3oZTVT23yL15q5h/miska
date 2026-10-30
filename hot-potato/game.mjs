@@ -7,7 +7,7 @@ import {loadProfile,saveProfile,addRun,ranked,cleanName} from './profile.mjs';
 const $=s=>document.querySelector(s),canvas=$('#game'),c=canvas.getContext('2d',{alpha:false});const names=['sky','forest','crystal','volcano','space'],colors=['#ffda58','#6fffaf','#e8a0ff','#ff9b3f','#7eebff'];
 const assets={},particles=[];let g=null,paused=false,last=0,acc=0,time=0,menuTime=0,pendingTap=false,seed=42,best={rings:0,score:0},lastNotice='',frames=[],visualTilt=0,surpriseMix=0,renderTravel=0,renderTime=0;
 try{best=JSON.parse(localStorage.getItem('ring-dive-best-v1'))||best}catch{}function record(){$('#record').textContent=`PARAS · ${best.rings} RENGASTA · ${best.score.toLocaleString('fi-FI')} PISTETTÄ`}record();
-const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','shoe','menu-body-front','menu-shoe-left','menu-shoe-right'].map(name=>new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
+const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','flight-shoe-clean','menu-body-front','dance-shoe-left','dance-shoe-right'].map(name=>new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
 const profile=(()=>{try{return loadProfile(localStorage)}catch{return loadProfile({getItem:()=>null})}})(),sound=new Sound(profile),menuGroove=sound.groove;menuGroove.beatOffset=()=>time%(BEAT*8);let weekOnly=false,runBestStreak=0,rankedSession=null,runTaps=[],starting=false,boardGeneration=0;
 function save(){try{saveProfile(localStorage,profile)}catch{}}
 window.addEventListener('storage',event=>{if(event.key==='ring-dive-profile-v2'){try{Object.assign(profile,loadProfile(localStorage));$('#playerName').value=profile.name;for(const [key,id,out] of [['music','musicVolume','musicValue'],['effects','effectsVolume','effectsValue']]){$('#'+id).value=Math.round(profile[key]*100);$('#'+out).textContent=$('#'+id).value+' %'}$('#reducedMotion').checked=profile.reduced;$('#shell').dataset.reduced=profile.reduced;sound.sync();if(!$('#leaderboard').hidden)renderBoard()}catch{}}});
@@ -43,6 +43,13 @@ const grad=c.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#081f4b45');grad
 const atlas=assets.props,sw=atlas.width/5;for(let j=0;j<4;j++){const depth=j%2?1.3:.8,loop=650,x=((j*203+580-travel*.27*depth)%loop+loop)%loop-120,y=j%2?500:560;const size=(j%2?135:100);c.globalAlpha=alpha*(j%2?.85:.55);c.drawImage(atlas,id*sw,0,sw,atlas.height,x,y+Math.sin(time*.5+j)*9,size,size*atlas.height/sw)}
 // Separate atmosphere layer: drifting mist / fireflies / crystal motes / embers / starlight.
 c.globalCompositeOperation='screen';for(let j=0;j<22;j++){const x=((j*71.31-travel*(.06+j%3*.035))%W+W)%W,y=(j*89.7+Math.sin(time*.65+j)*17)%H,sz=id===0?22:id===4?1:1.6;c.globalAlpha=alpha*(id===0?.08:.15+.28*(.5+.5*Math.sin(time+j)));c.fillStyle=id===0?'#fff':colors[id];c.beginPath();c.arc(x,y,sz,0,7);c.fill()}c.restore()}
+// Rounded limbs always begin inside the body and end inside a shoe collar.
+// They are rendered behind the body so a detached flat top can never show.
+function drawConnectedLeg(hx,hy,kx,ky,ax,ay,width){
+ const skin=c.createLinearGradient(ax-width,0,ax+width,0);skin.addColorStop(0,'#8d4e26');skin.addColorStop(.45,'#d9974c');skin.addColorStop(1,'#ad6732');
+ c.save();c.strokeStyle=skin;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';
+ c.beginPath();c.moveTo(hx,hy);c.quadraticCurveTo(kx,ky,ax,ay);c.stroke();c.restore();
+}
 function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
  const happy=assets['body-happy'],surprised=assets['body-surprised'];if(!happy)return;
  visualTilt=smooth(visualTilt,Math.max(-.2,Math.min(.32,vy/950)),dt,10);
@@ -51,11 +58,22 @@ function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
  c.save();c.translate(x,y);c.rotate(visualTilt+spin+(dance?.lean||0));c.scale(scale,scale);
  const clock=g?renderTime:time,energy=flap/.25;
  function wing(px,py,size,mirror,phase){const im=assets.wing;if(!im)return;c.save();c.translate(px,py);c.scale(mirror,1);c.rotate(dance?(mirror===1?dance.wingLeft:dance.wingRight):-.12+Math.sin(clock*14+phase)*(.12+energy*.5));const h=size*im.height/im.width;c.drawImage(im,-size*.87,-h*.78,size,h);c.restore()}
- function shoe(px,py,phase){const im=assets.shoe;if(!im)return;c.save();c.translate(px+(dance?(phase?dance.rightSlide:dance.leftSlide):0),py-(dance?(phase?dance.rightLift:dance.leftLift):0));c.scale(-1,1);c.rotate(.25+(dance?(phase?dance.rightTurn:dance.leftTurn):Math.sin(clock*7+phase)*.14+vy/2500));const w=19;c.drawImage(im,-w*.7,-5,w,w*im.height/im.width);c.restore()}
- wing(25,-4,22,-1,1.4);shoe(-7,25,1.8);shoe(-23,24,0);
+ function hangingLeg(hipX,hipY,drop,phase){
+  const sway=Math.sin(clock*5+phase)*2.2-Math.max(-3,Math.min(3,vy/150));
+  const ankleX=hipX+sway,ankleY=hipY+drop+Math.sin(clock*5+phase)*1.2;
+  drawConnectedLeg(hipX,hipY,hipX-2+sway*.5,hipY+drop*.5,ankleX,ankleY,6.5);
+  return ()=>{const im=assets['flight-shoe-clean'];if(!im)return;const w=23,h=w*im.height/im.width;
+   c.save();c.translate(ankleX,ankleY);c.rotate(.08+Math.sin(clock*5+phase)*.10);
+   // Empty sneaker collar overlaps the rounded ankle; its toe points right.
+   c.drawImage(im,-w*.25,-h*.22,w,h);c.restore();
+  };
+ }
+ wing(25,-4,22,-1,1.4);
+ const farFoot=hangingLeg(-20,15,23,1.8),nearFoot=hangingLeg(-3,19,25,0);
+ farFoot();
  poseContext.clearRect(0,0,270,240);poseContext.globalCompositeOperation='lighter';
  for(const [im,opacity] of [[happy,1-surpriseMix],[surprised,surpriseMix]]){if(!im||opacity<.002)continue;const w=240,h=w*im.height/im.width;poseContext.globalAlpha=opacity;poseContext.drawImage(im,(270-w)/2,(240-h)/2,w,h)}
- c.drawImage(poseCanvas,-40.5,-36,81,72);wing(-22,-3,32,1,0);c.restore();
+ c.drawImage(poseCanvas,-40.5,-36,81,72);nearFoot();wing(-22,-3,32,1,0);c.restore();
 }
 // The title has its own upright rig. Flight sprites and shoe directions are
 // intentionally kept separate from the standing, front-facing dance pose.
@@ -68,24 +86,31 @@ function standingPotato(x,y,scale,dance){
  const floor=c.createRadialGradient(0,0,2,0,0,46);
  floor.addColorStop(0,'#132b4080');floor.addColorStop(1,'#132b4000');
  c.fillStyle=floor;c.beginPath();c.arc(0,0,46,0,Math.PI*2);c.fill();c.restore();
- const feet=[{name:'menu-shoe-left',side:-1,slide:dance.leftSlide,lift:dance.leftLift,depth:dance.leftDepth,turn:dance.leftTurn,yaw:dance.leftYaw,pitch:dance.leftPitch},
- {name:'menu-shoe-right',side:1,slide:dance.rightSlide,lift:dance.rightLift,depth:dance.rightDepth,turn:dance.rightTurn,yaw:dance.rightYaw,pitch:dance.rightPitch}];
+ const feet=[{name:'dance-shoe-left',side:-1,slide:dance.leftSlide,lift:dance.leftLift,depth:dance.leftDepth,turn:dance.leftTurn,yaw:dance.leftYaw,pitch:dance.leftPitch},
+ {name:'dance-shoe-right',side:1,slide:dance.rightSlide,lift:dance.rightLift,depth:dance.rightDepth,turn:dance.rightTurn,yaw:dance.rightYaw,pitch:dance.rightPitch}];
  for(const f of feet){f.x=f.side*15+f.slide;f.y=52+f.depth*.3-f.lift;f.scale=1+f.depth*.006;
   c.fillStyle=`rgba(8,26,42,${.26*(1-f.lift/24)})`;c.beginPath();c.ellipse(f.x,53+f.depth*.3,12*f.scale,2.2+f.lift*.05,0,0,Math.PI*2);c.fill();
  }
- function foot(f){const im=assets[f.name],w=23,h=w*im.height/im.width;
-  // The short leg bends outwards as the knee rises. The body covers the hip.
-  const hipX=f.side*15+dance.x,hipY=18+dance.y,kneeX=f.x+f.side*(3+f.lift*.22),ankleY=f.y-h*.62;
-  const skin=c.createLinearGradient(kneeX-5,0,kneeX+5,0);skin.addColorStop(0,'#9b572b');skin.addColorStop(.45,'#db9b51');skin.addColorStop(1,'#a56330');
-  c.strokeStyle=skin;c.lineWidth=9;c.lineCap='round';c.beginPath();c.moveTo(hipX,hipY);c.quadraticCurveTo(kneeX,(hipY+ankleY)/2+4,f.x,ankleY);c.stroke();
+ function shoeFrame(f){const im=assets[f.name],w=23,h=w*im.height/im.width;
+  const pivot=f.turn>0?7:-7,cs=Math.cos(f.turn),sn=Math.sin(f.turn);
+  // Transform the actual collar point with the SAME sole pivot and perspective
+  // as the sneaker. The ankle therefore remains joined throughout the shuffle.
+  const sx=Math.sin(f.yaw)*.22*(-h*.84),sy=Math.cos(f.pitch)*(-h*.84);
+  f.ax=f.x+f.scale*(pivot+cs*(sx-pivot)-sn*(sy+1));
+  f.ay=f.y+f.scale*(-1+sn*(sx-pivot)+cs*(sy+1));
+  return {im,w,h};
+ }
+ const bodyAngle=dance.lean+(dance.headTurn||0),cs=Math.cos(bodyAngle),sn=Math.sin(bodyAngle);
+ for(const f of feet){shoeFrame(f);const hx=f.side*15,hy=16;
+  const hipX=dance.x+cs*hx-sn*hy,hipY=dance.y+sn*hx+cs*hy;
+  drawConnectedLeg(hipX,hipY,f.ax+f.side*(2+f.lift*.14),(hipY+f.ay)/2+3,f.ax,f.ay,8);
+ }
+ function foot(f){const {im,w,h}=shoeFrame(f);
   c.save();c.translate(f.x,f.y);c.scale(f.scale,f.scale);
-  // Heel/toe pivots take place around the sole, not around the body centre.
   c.translate(f.turn>0?7:-7,-1);c.rotate(f.turn);c.translate(f.turn>0?-7:7,1);
   c.transform(Math.cos(f.yaw),0,Math.sin(f.yaw)*.22,Math.cos(f.pitch),0,0);
   c.drawImage(im,-w/2,-h,w,h);c.restore();
  }
- // The stepping shoe can move in FRONT of the body; depth order changes at
- // the plant, where it is low enough to avoid a visible occlusion pop.
  for(const f of feet.filter(f=>f.depth<=0&&f.lift<=1))foot(f);
  c.save();c.translate(dance.x,dance.y);c.rotate(dance.lean);
  function arm(px,mirror,angle){const im=assets.wing,w=26,h=w*im.height/im.width;
