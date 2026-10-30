@@ -58,3 +58,10 @@ Music and effects now share one AudioContext, unlocked directly by a menu/play/s
 `leaderboard-server.mjs` and `leaderboard-client.mjs` prepare a separate durable global leaderboard, with exact simulation replay checks. It is NOT enabled (`API_URL=''`) and no paid resources were created. See `LEADERBOARD.md`. Existing Render production remains a static site. MevsMe was not present in accessible GitHub repositories; the user chose a new Ring Dive leaderboard.
 
 Validation: 50 automated tests pass (`node --test --test-force-exit hot-potato/tests/*.test.mjs`), including inverted-angle settling, preserved impact onset, identical frame-rate outcomes, real/test record separation, profile persistence, shared audio context/failed unlock and server replay verification/duplicate rejection/CORS. Browser checks cover title, audio controls, a real no-input game over and saved scoreboard entry, settings and portrait layouts.
+
+## Grounded menu shuffle — 2026-10-30
+Replaced the small alternating shoe bob with an eight-beat running-man / heel-toe T-step phrase. The weighted foot slides backwards on the floor while the free knee lifts, recovers forwards and plants with zero vertical speed. Shoes have separate depth, uniform perspective scale, sole pivots, slight yaw/pitch and contact shadows. Short shaded legs connect hips to ankles; lifted shoes move in front of the torso. The rigid body shifts its weight and counter-swings its wings. Body scale and game physics are unchanged. This is a hand-animated 2.5D rig, not motion capture or a 3D skeletal character.
+
+Music starts at the existing dance phrase position, avoiding an animation reset when sound is enabled. The calmer-menu setting still disables dance. No new services or payments.
+
+Validation: 53 automated tests pass, including support-foot contact, opposite support/recovery trajectories, eight-beat continuity, foot-plant velocity and music-start phase continuity. The updated title rig and floor/contact shadows were inspected in the browser.

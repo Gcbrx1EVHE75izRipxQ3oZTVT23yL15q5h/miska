@@ -1,6 +1,6 @@
 import {Game,STEP,PX,W,H,tier,WORLDS,STARTS,ringY,environment,multiplier} from './physics.mjs';
 import {smooth,renderState} from './motion.mjs';
-import {dancePose} from './groove.mjs';
+import {dancePose,BEAT} from './groove.mjs';
 import {Sound} from './sound.mjs';
 import {API_URL,beginRankedRun,submitRankedRun,fetchRankings} from './leaderboard-client.mjs';
 import {loadProfile,saveProfile,addRun,ranked,cleanName} from './profile.mjs';
@@ -8,7 +8,7 @@ const $=s=>document.querySelector(s),canvas=$('#game'),c=canvas.getContext('2d',
 const assets={},particles=[];let g=null,paused=false,last=0,acc=0,time=0,menuTime=0,pendingTap=false,seed=42,best={rings:0,score:0},lastNotice='',frames=[],visualTilt=0,surpriseMix=0,renderTravel=0,renderTime=0;
 try{best=JSON.parse(localStorage.getItem('ring-dive-best-v1'))||best}catch{}function record(){$('#record').textContent=`PARAS · ${best.rings} RENGASTA · ${best.score.toLocaleString('fi-FI')} PISTETTÄ`}record();
 const loading=Promise.all([...names,'logo','props','body-happy','body-surprised','wing','shoe','menu-body-front','menu-shoe-left','menu-shoe-right'].map(name=>new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[name]=im;resolve()};im.onerror=()=>reject(Error(name));im.src=`assets/${name}.webp`})));
-const profile=(()=>{try{return loadProfile(localStorage)}catch{return loadProfile({getItem:()=>null})}})(),sound=new Sound(profile),menuGroove=sound.groove;let weekOnly=false,runBestStreak=0,rankedSession=null,runTaps=[],starting=false,boardGeneration=0;
+const profile=(()=>{try{return loadProfile(localStorage)}catch{return loadProfile({getItem:()=>null})}})(),sound=new Sound(profile),menuGroove=sound.groove;menuGroove.beatOffset=()=>time%(BEAT*8);let weekOnly=false,runBestStreak=0,rankedSession=null,runTaps=[],starting=false,boardGeneration=0;
 function save(){try{saveProfile(localStorage,profile)}catch{}}
 window.addEventListener('storage',event=>{if(event.key==='ring-dive-profile-v2'){try{Object.assign(profile,loadProfile(localStorage));$('#playerName').value=profile.name;for(const [key,id,out] of [['music','musicVolume','musicValue'],['effects','effectsVolume','effectsValue']]){$('#'+id).value=Math.round(profile[key]*100);$('#'+out).textContent=$('#'+id).value+' %'}$('#reducedMotion').checked=profile.reduced;$('#shell').dataset.reduced=profile.reduced;sound.sync();if(!$('#leaderboard').hidden)renderBoard()}catch{}}});
 function syncMusic(){sound.menu=!$('#menu').hidden;sound.visible=!document.hidden;sound.sync();$('#shell').classList.toggle('menu-open',!$('#menu').hidden)}
@@ -61,21 +61,41 @@ function potato(x,y,vy,flap,scale=1,dt=0,spin=0,omega=0,dance=null){
 // intentionally kept separate from the standing, front-facing dance pose.
 function standingPotato(x,y,scale,dance){
  const body=assets['menu-body-front'];if(!body)return;
- c.save();c.translate(x,y);c.scale(scale,scale);
- c.fillStyle='#d9f5ff28';c.beginPath();c.ellipse(0,51,48,6,0,0,Math.PI*2);c.fill();
- function foot(name,px,lift,turn){const im=assets[name],w=23,h=w*im.height/im.width;
-  c.save();c.translate(px,50-lift);c.rotate(turn);c.drawImage(im,-w/2,-h,w,h);c.restore();
+ c.save();c.translate(x,y);c.scale(scale,scale);c.translate(dance.travel||0,0);
+ // A stationary floor and separate contact shadows make the sliding support
+ // foot read as grounded rather than the whole character floating around.
+ c.save();c.translate(0,53);c.scale(1,.13);
+ const floor=c.createRadialGradient(0,0,2,0,0,46);
+ floor.addColorStop(0,'#132b4080');floor.addColorStop(1,'#132b4000');
+ c.fillStyle=floor;c.beginPath();c.arc(0,0,46,0,Math.PI*2);c.fill();c.restore();
+ const feet=[{name:'menu-shoe-left',side:-1,slide:dance.leftSlide,lift:dance.leftLift,depth:dance.leftDepth,turn:dance.leftTurn,yaw:dance.leftYaw,pitch:dance.leftPitch},
+ {name:'menu-shoe-right',side:1,slide:dance.rightSlide,lift:dance.rightLift,depth:dance.rightDepth,turn:dance.rightTurn,yaw:dance.rightYaw,pitch:dance.rightPitch}];
+ for(const f of feet){f.x=f.side*15+f.slide;f.y=52+f.depth*.3-f.lift;f.scale=1+f.depth*.006;
+  c.fillStyle=`rgba(8,26,42,${.26*(1-f.lift/24)})`;c.beginPath();c.ellipse(f.x,53+f.depth*.3,12*f.scale,2.2+f.lift*.05,0,0,Math.PI*2);c.fill();
  }
- // Shoes sit below the body, both toes face the camera; no side-view rotation.
- foot('menu-shoe-left',-15+dance.leftSlide,dance.leftLift,dance.leftTurn);
- foot('menu-shoe-right',15+dance.rightSlide,dance.rightLift,dance.rightTurn);
+ function foot(f){const im=assets[f.name],w=23,h=w*im.height/im.width;
+  // The short leg bends outwards as the knee rises. The body covers the hip.
+  const hipX=f.side*15+dance.x,hipY=18+dance.y,kneeX=f.x+f.side*(3+f.lift*.22),ankleY=f.y-h*.62;
+  const skin=c.createLinearGradient(kneeX-5,0,kneeX+5,0);skin.addColorStop(0,'#9b572b');skin.addColorStop(.45,'#db9b51');skin.addColorStop(1,'#a56330');
+  c.strokeStyle=skin;c.lineWidth=9;c.lineCap='round';c.beginPath();c.moveTo(hipX,hipY);c.quadraticCurveTo(kneeX,(hipY+ankleY)/2+4,f.x,ankleY);c.stroke();
+  c.save();c.translate(f.x,f.y);c.scale(f.scale,f.scale);
+  // Heel/toe pivots take place around the sole, not around the body centre.
+  c.translate(f.turn>0?7:-7,-1);c.rotate(f.turn);c.translate(f.turn>0?-7:7,1);
+  c.transform(Math.cos(f.yaw),0,Math.sin(f.yaw)*.22,Math.cos(f.pitch),0,0);
+  c.drawImage(im,-w/2,-h,w,h);c.restore();
+ }
+ // The stepping shoe can move in FRONT of the body; depth order changes at
+ // the plant, where it is low enough to avoid a visible occlusion pop.
+ for(const f of feet.filter(f=>f.depth<=0&&f.lift<=1))foot(f);
  c.save();c.translate(dance.x,dance.y);c.rotate(dance.lean);
  function arm(px,mirror,angle){const im=assets.wing,w=26,h=w*im.height/im.width;
   c.save();c.translate(px,-17);c.scale(mirror,1);c.rotate(angle);c.drawImage(im,-w*.9,-h*.65,w,h);c.restore();
  }
  arm(-28,1,dance.wingLeft);arm(28,-1,dance.wingRight);
- const w=64,h=w*body.height/body.width;c.drawImage(body,-w/2,24-h,w,h);
- c.restore();c.restore();
+ const w=64,h=w*body.height/body.width;
+ c.save();c.rotate(dance.headTurn||0);c.drawImage(body,-w/2,24-h,w,h);c.restore();
+ c.restore();for(const f of feet.filter(f=>f.depth>0||f.lift>1))foot(f);
+ c.restore();
 }
 function puff(x,y,color,n=18){for(let i=0;i<n;i++){const a=i*2.399+time,v=20+(i%7)*12;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.65,max:.65,col:color,size:1+i%3})}if(particles.length>100)particles.splice(0,particles.length-100)}
 function tone(type){sound.effect(type)}
