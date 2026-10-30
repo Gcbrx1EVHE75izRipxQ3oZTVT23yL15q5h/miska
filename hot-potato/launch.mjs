@@ -1,4 +1,4 @@
-import {SPAWN_Y} from './physics.mjs?v=3.2';
+import {SPAWN_Y} from './physics.mjs?v=3.3';
 const clamp=t=>Math.max(0,Math.min(1,t)),ease=t=>{t=clamp(t);return t*t*(3-2*t)},mix=(a,b,t)=>a+(b-a)*t;
 export const RUN_TIME=1.05,JUMP_TIME=.75,EXIT_TIME=.55,LAUNCH_DURATION=RUN_TIME+JUMP_TIME+EXIT_TIME;
 const hermite=(a,b,va,vb,d,t)=>{t=clamp(t);return (2*t**3-3*t*t+1)*a+(t**3-2*t*t+t)*d*va+(-2*t**3+3*t*t)*b+(t**3-t*t)*d*vb};
