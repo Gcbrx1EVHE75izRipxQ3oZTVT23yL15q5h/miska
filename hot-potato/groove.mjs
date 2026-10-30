@@ -30,7 +30,7 @@ export function dancePose(seconds){
 }
 export class MenuGroove{
  constructor(factory=()=>new (window.AudioContext||window.webkitAudioContext)()){
-  this.factory=factory;this.ctx=null;this.running=false;this.timer=null;this.sources=new Set();this.origin=0;this.next=0;this.generation=0;
+  this.factory=factory;this.ctx=null;this.running=false;this.timer=null;this.sources=new Set();this.origin=0;this.next=0;this.generation=0;this.volume=.65;
  }
  get seconds(){return this.running&&this.ctx?Math.max(0,this.ctx.currentTime-this.origin):null}
  async start(){
@@ -40,7 +40,7 @@ export class MenuGroove{
    // Set synchronously so a later stop (Play/hidden tab) cancels pending resume.
    this.running=true;const generation=++this.generation;await this.ctx.resume();if(!this.running||generation!==this.generation)return;
    this.origin=this.ctx.currentTime+.035;this.next=0;
-   this.master.gain.cancelScheduledValues(this.ctx.currentTime);this.master.gain.setValueAtTime(0,this.ctx.currentTime);this.master.gain.linearRampToValueAtTime(.3,this.ctx.currentTime+.1);
+   this.master.gain.cancelScheduledValues(this.ctx.currentTime);this.master.gain.setValueAtTime(0,this.ctx.currentTime);this.master.gain.linearRampToValueAtTime(.55*this.volume,this.ctx.currentTime+.1);
    this.schedule();this.timer=setInterval(()=>this.schedule(),25);
   }catch{this.running=false;this.stop()}
  }

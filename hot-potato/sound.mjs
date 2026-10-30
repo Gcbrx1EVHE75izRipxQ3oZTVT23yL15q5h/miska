@@ -1,0 +1,10 @@
+import {MenuGroove} from './groove.mjs';
+export class Sound{
+ constructor(settings){this.settings=settings;this.ctx=null;this.unlocked=false;this.error='';this.groove=new MenuGroove(()=>this.context());this.muted=false;this.menu=true;this.visible=true;this.listeners=[]}
+ context(){if(!this.ctx){if(navigator.audioSession)navigator.audioSession.type='playback';this.ctx=new(window.AudioContext||window.webkitAudioContext)();this.ctx.onstatechange=()=>{if(this.ctx.state!=='running')this.unlocked=false;this.changed()}}return this.ctx}
+ changed(){for(const fn of this.listeners)fn()}
+ async unlock(){try{const c=this.context();await c.resume();this.unlocked=c.state==='running';this.error=this.unlocked?'':'Äänen käynnistys odottaa painallusta';if(this.unlocked){const b=c.createBuffer(1,1,c.sampleRate),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start();this.sync()}this.changed();return this.unlocked}catch{this.error='Selain ei käynnistänyt ääntä. Kokeile uudelleen.';this.changed();return false}}
+ sync(){const yes=this.unlocked&&!this.muted&&this.visible&&this.menu&&this.settings.music>0;this.groove.volume=this.settings.music;yes?this.groove.start():this.groove.stop();if(this.groove.master&&yes)this.groove.master.gain.setTargetAtTime(.55*this.settings.music,this.ctx.currentTime,.04);this.changed()}
+ effect(type){if(!this.unlocked||this.muted||!this.visible||!this.settings.effects)return;const c=this.ctx;if(c.state!=='running')return;const at=c.currentTime,o=c.createOscillator(),gain=c.createGain();o.connect(gain);gain.connect(c.destination);o.type=type==='graze'?'triangle':'sine';const notes={tap:[330,510,.08],pass:[520,900,.19],perfect:[740,1480,.25],graze:[240,145,.15],over:[220,65,.35],click:[620,800,.06]};const [a,b,d]=notes[type]||notes.pass;o.frequency.setValueAtTime(a,at);o.frequency.exponentialRampToValueAtTime(b,at+d);gain.gain.setValueAtTime(.14*this.settings.effects,at);gain.gain.exponentialRampToValueAtTime(.001,at+d);o.start(at);o.stop(at+d+.01);o.onended=()=>{o.disconnect();gain.disconnect()}}
+ get status(){return this.error||(this.muted?'ÄÄNET MYKISTETTY':this.unlocked?'ÄÄNET PÄÄLLÄ':'NAPAUTA ÄÄNET PÄÄLLE')}
+}

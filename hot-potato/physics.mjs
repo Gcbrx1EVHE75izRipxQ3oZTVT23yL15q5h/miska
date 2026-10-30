@@ -63,15 +63,23 @@ export function downwardGate(r,x0,y0,x1,y1){
  if(Math.abs(x)>=r.half-5)return null;
  return !r.grazed&&Math.abs(x)<r.half*.2?'perfect':'pass';
 }
+// Keep the collision-driven tumble, then let the wings settle the rigid body
+// towards the nearest upright revolution. No angle snap and no flight-force change.
+export function settleRotation(body,age){
+ if(age<.32){body.omega*=Math.exp(-.65*STEP)}
+ else {const target=Math.round(body.spin/(Math.PI*2))*Math.PI*2;
+ body.omega+=(-15*(body.spin-target)-7.5*body.omega)*STEP;}
+ body.spin+=body.omega*STEP;
+}
 export class Game{
- constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.omega=0;this.x=PX;this.prevX=PX;this.vx=0;this.rimFeedback=0;this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
+ constructor({seed=42,start=0,test=false,demo=false}={}){this.course=new Course(seed);this.test=test||demo||start>0;this.demo=demo;this.mode='play';this.tick=0;this.y=275;this.vy=0;this.travel=0;this.passed=0;this.score=0;this.streak=0;this.notice='';this.noticeTime=0;this.flapTime=0;this.events=[];this.reason='';this.prevY=this.y;this.prevTravel=0;this.spin=0;this.prevSpin=0;this.omega=0;this.x=PX;this.prevX=PX;this.vx=0;this.rimFeedback=0;this.lastImpactTick=0;this.start=start; if(start){const until=this.course.rings[start-1].witnessTick;while(this.tick<until&&this.mode==='play')this.step(this.course.taps.has(this.tick));this.events=[];this.score=0;this.streak=0;this.noticeTime=0;this.notice='';this.demo=demo;this.test=true;}}
  step(tap=false){
   if(this.mode!=='play')return;this.events=[];
   const beforeY=this.y,beforeX=this.x,beforeTravel=this.travel,time=this.tick*STEP;
   this.prevY=this.y;this.prevX=this.x;this.prevTravel=this.travel;this.prevSpin=this.spin;
   this.rimFeedback=Math.max(0,this.rimFeedback-STEP);
   // Air resistance slows rotation without prescribing an angle or a full turn.
-  this.omega*=Math.exp(-.65*STEP);this.spin+=this.omega*STEP;
+  settleRotation(this,(this.tick-this.lastImpactTick)*STEP);
   if(this.demo)tap=this.course.taps.has(this.tick);
   integrate(this,tap);
   // Automatic forward flight gently recovers its screen position after recoil.
@@ -86,7 +94,7 @@ export class Game{
   let scored=null;
   if(impact){
    const {fraction:f,nx,ny,edge}=impact;
-   resolveRimVelocity(this,impact,forward,(ry1-ry0)/STEP);
+   resolveRimVelocity(this,impact,forward,(ry1-ry0)/STEP);this.lastImpactTick=this.tick;
    const touchX=edge+nx*23.02,touchY=ny*23.02;
    // Resolve penetration at time of impact, then advance the remaining substep.
    this.x=r.x-(beforeTravel+forward*STEP*f)+touchX+this.vx*STEP*(1-f);
