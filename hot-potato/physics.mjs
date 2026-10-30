@@ -1,8 +1,8 @@
-import {SoftRig} from './soft-rig.mjs?v=3.0';
-import {rigHull,rimSeparation,sweepRig,RIM_TUBE,RIM_SKIN,RIG_RADIUS,rigCleared,updateTilt} from './rig-geometry.mjs?v=3.0';
+import {SoftRig} from './soft-rig.mjs?v=3.3';
+import {rigHull,rimSeparation,sweepRig,RIM_TUBE,RIM_SKIN,RIG_RADIUS,rigCleared,updateTilt} from './rig-geometry.mjs?v=3.3';
 // Ring Dive arcade tuning inspired by the supplied motion reference; no borrowed code.
 export const STEP=1/120, GRAVITY=980, IMPULSE=-360, PX=112, W=400,H=650;
-export const SPAWN_Y=385,CEILING_Y=40,FIRST_RING_GRACE=420;
+export const SPAWN_Y=385,CEILING_Y=40,FIRST_RING_GRACE=180;
 export const STARTS=[0,15,35,60,90];
 export const WORLDS=['TAIVAS','LUMOMETSÄ','KRISTALLILUOLA','TULIVUORI','AVARUUS'];
 export const tier=n=>n>=90?4:n>=60?3:n>=35?2:n>=15?1:0;
@@ -33,7 +33,7 @@ export class Course{
   }
   const n=this.rings.length,t=tier(n);
   if((n>0||this.tick>=FIRST_RING_GRACE)&&this.travel-this.lastRing>=220&&this.p.vy>90&&this.p.y>295&&this.p.y<575){const amplitude=t<2?0:(t-1)*5+Math.min(6,Math.max(0,n-90)*.035),phase=this.random()*6.28,frequency=.9+Math.min(.3,n*.001),time=this.tick*STEP;
-   const candidate={n,t,x:this.travel+PX,base:this.p.y-Math.sin(time*frequency+phase)*amplitude,amplitude,phase,frequency,half:[84,78,72,66,60][t]-Math.min(4,Math.max(0,n-90)*.012)};
+   const candidate={n,t,x:this.travel+PX,base:this.p.y-Math.sin(time*frequency+phase)*amplitude,amplitude,phase,frequency,half:[72,68,64,60,56][t]-Math.min(4,Math.max(0,n-90)*.012)};
    if(candidate.base-candidate.amplitude<300||candidate.base+candidate.amplitude>470)continue;
    let valid=true;for(let j=1;j<this.history.length;j++){const a=this.history[j-1],b=this.history[j];if(sweepRig(candidate,a.travel-this.travel,a.y-ringY(candidate,a.tick*STEP),b.travel-this.travel,b.y-ringY(candidate,b.tick*STEP),a.tilt,b.tilt,.2)){valid=false;break}}
    if(valid)this.pending=candidate;
@@ -122,7 +122,7 @@ export class Game{
   const r=this.course.rings[this.passed],ry0=ringY(r,time),ry1=ringY(r,time+STEP);
   const x0=beforeX-(r.x-beforeTravel),y0=beforeY-ry0;
   let scored=null,touched=false;
-  const active=this.course.rings.slice(Math.max(0,this.passed-1),this.passed+1);
+  const active=[r];
   for(const obstacle of active){const oy0=ringY(obstacle,time),oy1=ringY(obstacle,time+STEP);
    const sx0=beforeX-(obstacle.x-beforeTravel),sy0=beforeY-oy0,sx1=this.x-(obstacle.x-this.travel),sy1=this.y-oy1;
    const impact=sweepRig(obstacle,sx0,sy0,sx1,sy1,this.prevSpin+this.prevTilt,this.spin+this.tilt);
@@ -131,8 +131,8 @@ export class Game{
     obstacle.grazed=true;obstacle.lastContactTick=this.tick;this.streak=0;
    }
   }
-  // Position projection keeps the firm body outside the rim after every impact. This
-  // also keeps the still-visible previous ring solid during an upward flap.
+  // Position projection keeps the firm body outside the active rim after impact.
+  // Passed rings vanish and no longer participate in collision checks.
   for(let iteration=0;iteration<32;iteration++){let moved=false;
    for(const obstacle of active){const rx=this.x-(obstacle.x-this.travel),ry=this.y-ringY(obstacle,time+STEP);if(Math.abs(rx)>obstacle.half+RIG_RADIUS+8)continue;
     for(const edge of[-obstacle.half,obstacle.half]){const separation=rimSeparation(rigHull(this.x-(obstacle.x-this.travel),this.y-ringY(obstacle,time+STEP),this.spin+this.tilt),edge),depth=RIM_TUBE+RIM_SKIN+.04-separation.distance;
@@ -148,7 +148,7 @@ export class Game{
   if(r.entered&&rigCleared(r,finalX,finalY,this.spin+this.tilt))scored=r.entryPerfect&&!r.grazed?'perfect':'pass';
   if(this.y>H-24){this.lose('Putosit liian alas');return}
   if(this.x-(r.x-this.travel)>r.half+RIG_RADIUS+8&&!scored&&this.tick-(r.lastContactTick??-Infinity)>72){this.lose('Ohitit renkaan');return}
-  if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const pts=(hit==='perfect'?100:40)*multiplier(this.streak);this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,x:this.x,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
+  if(scored){const hit=scored;this.passed++;this.streak=hit==='perfect'?this.streak+1:0;const bonus=hit==='perfect'?50*multiplier(this.streak):0,pts=(hit==='perfect'?100:40)*multiplier(this.streak)+bonus;this.score+=pts;this.notice=hit==='perfect'?'PERFECT!':'HYVÄ!';this.noticeTime=1.1;this.events.push({type:hit,pts,bonus,x:this.x,y:this.y});if(this.passed+30>this.course.rings.length)this.course.extend(this.course.rings.length+100)}
  }
 
  lose(reason){this.mode='over';this.reason=reason;this.events.push({type:'over'})}

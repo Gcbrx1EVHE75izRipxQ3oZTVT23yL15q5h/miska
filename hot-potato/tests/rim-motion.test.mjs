@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {Game,STEP,GRAVITY,rimImpact,resolveRimVelocity,downwardGate} from '../physics.mjs';
 import {smooth,renderState} from '../motion.mjs';
-function fixture({y=253,vy=-GRAVITY*STEP/2,x=222}={}){const g=new Game({test:true});g.y=g.prevY=y;g.vy=vy;Object.assign(g.course.rings[0],{x,base:275,amplitude:0});return g}
+function fixture({y=253,vy=-GRAVITY*STEP/2,x=222}={}){const g=new Game({test:true});g.y=g.prevY=y;g.vy=vy;Object.assign(g.course.rings[0],{x,base:275,amplitude:0,half:84});return g}
 function energy(b,forward=130){return .5*((b.vx+forward)**2+b.vy**2)+.25*18**2*b.omega**2}
 test('all directions of rim impact rebound rather than end the game',()=>{for(const y of [253,258,265,275,285,292,297]){const g=fixture({y,x:222});g.step();assert.equal(g.mode,'play');assert.equal(g.passed,0);assert.equal(g.score,0)}});
 test('direct head-on collision reverses relative horizontal velocity and is nonfatal',()=>{const g=fixture({y:275,x:238,vy:-GRAVITY*STEP});g.step();assert.equal(g.mode,'play');assert.ok(g.vx+170<0);assert.ok(g.x<112);assert.equal(g.passed,0)});

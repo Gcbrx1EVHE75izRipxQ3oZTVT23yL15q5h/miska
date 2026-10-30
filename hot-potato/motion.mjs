@@ -9,3 +9,7 @@ export function poseWeights(previous,target,dt){
 export function renderState(g,alpha){const a=Math.max(0,Math.min(1,alpha));return {tilt:lerp(g.prevTilt??g.tilt??0,g.tilt??0,a),x:lerp(g.prevX??g.x??112,g.x??112,a),spin:lerp(g.prevSpin??g.spin,g.spin,a),y:lerp(g.prevY??g.y,g.y,a),travel:lerp(g.prevTravel??g.travel,g.travel,a),time:Math.max(0,g.tick-1+a)/120}}
 
 export const cameraOffsetX=(playerX,width=400)=>width/2-playerX;
+
+// Wider gameplay framing only; HUD, menus and simulation units stay unchanged.
+export const FLIGHT_ZOOM=.78;
+export function flightCamera(playerX,zoom=FLIGHT_ZOOM,width=400,height=650){return{zoom,x:width/2-zoom*playerX,y:height/2*(1-zoom)}}

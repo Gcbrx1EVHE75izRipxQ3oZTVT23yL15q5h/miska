@@ -4,7 +4,7 @@ const rotate=(x,y,a)=>({x:x*Math.cos(a)-y*Math.sin(a),y:x*Math.sin(a)+y*Math.cos
 // The same shoulder/elbow/wrist anchors drive both drawing and collision bounds.
 export function armPose(side,phase,flight=false){
  const wave=Math.sin(phase+(side<0?0:Math.PI)),cross=Math.cos(phase*2);
- return flight?{hx:side*26,hy:5,kx:side*(34+2*wave),ky:16,ax:side*(36+3*wave),ay:27+3*cross}
+ return flight?{hx:side<0?-13:8,hy:12,kx:side<0?-24:19,ky:24+wave,ax:side<0?-29:27,ay:37+cross}
  :{hx:side*25,hy:-9,kx:side*(34+5*wave),ky:1-9*wave,ax:side*(38+7*wave),ay:9-22*wave};
 }
 // Only the potato's firm body is rigid. Hands, feet and wings are articulated.

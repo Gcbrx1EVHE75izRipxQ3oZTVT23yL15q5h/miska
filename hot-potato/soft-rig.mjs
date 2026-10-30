@@ -1,4 +1,4 @@
-import {armPose,RIM_TUBE,RIM_SKIN} from './rig-geometry.mjs?v=3.0';
+import {armPose,RIM_TUBE,RIM_SKIN} from './rig-geometry.mjs?v=3.3';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function flightTargets(time,vy=0){
  const arms=[-1,1].map(side=>({...armPose(side,time*5,true),kind:'arm',side,radius:7,length:18}));
