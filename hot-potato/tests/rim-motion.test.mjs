@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {Game,STEP,GRAVITY,rimImpact,resolveRimVelocity,downwardGate} from '../physics.mjs';
 import {smooth,renderState} from '../motion.mjs';
-function fixture({y=245,vy=-GRAVITY*STEP/2,x=297}={}){const g=new Game({test:true});g.y=g.prevY=y;g.vy=vy;Object.assign(g.course.rings[0],{x,base:275,amplitude:0});return g}
+function fixture({y=253,vy=-GRAVITY*STEP/2,x=222}={}){const g=new Game({test:true});g.y=g.prevY=y;g.vy=vy;Object.assign(g.course.rings[0],{x,base:275,amplitude:0});return g}
 function energy(b,forward=130){return .5*((b.vx+forward)**2+b.vy**2)+.25*18**2*b.omega**2}
-test('all directions of rim impact rebound rather than end the game',()=>{for(const y of [253,258,265,275,285,292,297]){const g=fixture({y,x:297});g.step();assert.equal(g.mode,'play');assert.equal(g.passed,0);assert.equal(g.score,0)}});
-test('direct head-on collision reverses relative horizontal velocity and is nonfatal',()=>{const g=fixture({y:275,x:297,vy:-GRAVITY*STEP});g.step();assert.equal(g.mode,'play');assert.ok(g.vx+130<0);assert.ok(g.x<112);assert.equal(g.passed,0)});
+test('all directions of rim impact rebound rather than end the game',()=>{for(const y of [253,258,265,275,285,292,297]){const g=fixture({y,x:222});g.step();assert.equal(g.mode,'play');assert.equal(g.passed,0);assert.equal(g.score,0)}});
+test('direct head-on collision reverses relative horizontal velocity and is nonfatal',()=>{const g=fixture({y:275,x:238,vy:-GRAVITY*STEP});g.step();assert.equal(g.mode,'play');assert.ok(g.vx+170<0);assert.ok(g.x<112);assert.equal(g.passed,0)});
 test('central normal impulse does not invent a spin',()=>{const b={vx:0,vy:0,omega:0};resolveRimVelocity(b,{nx:-1,ny:0},130);assert.equal(b.omega,0);assert.ok(b.vx+130<0)});
 test('tangential contact friction creates opposite spins for mirrored contacts',()=>{const up={vx:0,vy:0,omega:0},down={...up};resolveRimVelocity(up,{nx:-.3,ny:-Math.sqrt(.91)},130);resolveRimVelocity(down,{nx:-.3,ny:Math.sqrt(.91)},130);assert.ok(up.omega>0);assert.ok(down.omega<0);assert.ok(Math.abs(up.omega+down.omega)<1e-12)});
 test('spin magnitude depends on impact speed, not a fixed full turn',()=>{const slow={vx:0,vy:0,omega:0},fast={...slow},normal={nx:-.4,ny:-Math.sqrt(.84)};resolveRimVelocity(slow,normal,80);resolveRimVelocity(fast,normal,160);assert.ok(Math.abs(fast.omega-slow.omega*2)<1e-10)});
@@ -19,4 +19,4 @@ test('render interpolates horizontal recoil, vertical flight and rotation togeth
 test('visual easing has identical response at 60 and 120Hz',()=>{const run=hz=>{let n=0;for(let i=0;i<hz;i++)n=smooth(n,1,1/hz);return n};assert.ok(Math.abs(run(60)-run(120))<1e-12)});
 test('collision and free rotation are identical at 60 and 120Hz',()=>{const run=hz=>{const g=fixture();let acc=0;for(let i=0;i<hz;i++){acc+=1/hz;while(acc+1e-10>=STEP){g.step();acc-=STEP}}return {passed:g.passed,x:g.x,y:g.y,vx:g.vx,vy:g.vy,spin:g.spin,omega:g.omega,score:g.score}};assert.deepEqual(run(60),run(120))});
 
-test('outer trailing-rim contact cannot immediately masquerade as a missed ring',()=>{const g=fixture({y:225,vy:300,x:112-128});g.step();assert.equal(g.mode,'play');assert.ok(g.course.rings[0].lastContactTick>0);assert.equal(g.passed,0);for(let i=0;i<12;i++)g.step();assert.equal(g.mode,'play')});
+test('outer trailing-rim contact cannot immediately masquerade as a missed ring',()=>{const g=fixture({y:253,vy:300,x:112-84});g.step();assert.equal(g.mode,'play');assert.ok(g.course.rings[0].lastContactTick>0);assert.equal(g.passed,0);for(let i=0;i<12;i++)g.step();assert.equal(g.mode,'play')});
