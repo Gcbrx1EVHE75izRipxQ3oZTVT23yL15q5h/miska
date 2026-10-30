@@ -19,10 +19,14 @@ export function grooveStep(index){
  return events;
 }
 export function dancePose(seconds){
- const beat=Math.max(0,seconds)/BEAT,phase=beat*Math.PI,alternating=Math.sin(phase),swing=Math.sin(phase*.5);
- return {x:12*swing,y:-4*Math.sin(phase)**2,lean:.11*alternating,
- leftSlide:5*alternating,rightSlide:-5*alternating,leftLift:7*Math.max(0,alternating),rightLift:7*Math.max(0,-alternating),
- leftTurn:.32*alternating,rightTurn:-.32*alternating,wingLeft:-.15+.27*Math.sin(phase+.4),wingRight:-.15+.27*Math.sin(phase+1.1)};
+ const beat=Math.max(0,seconds)/BEAT,phase=beat*Math.PI,alternating=Math.sin(phase);
+ // Front-facing planted shuffle: one support foot stays down while the other
+ // lifts inward. Squared half-waves give zero velocity at each foot plant.
+ const left=Math.max(0,alternating)**2,right=Math.max(0,-alternating)**2;
+ return {x:3*alternating,y:1.5*(1-Math.cos(phase*2)),lean:.02*alternating,
+ leftSlide:5*left-2*right,rightSlide:-5*right+2*left,
+ leftLift:8*left,rightLift:8*right,leftTurn:.075*Math.sin(phase*2),rightTurn:-.075*Math.sin(phase*2),
+ wingLeft:-.1+.22*Math.sin(phase+.4),wingRight:-.1+.22*Math.sin(phase+1.1)};
 }
 export class MenuGroove{
  constructor(factory=()=>new (window.AudioContext||window.webkitAudioContext)()){
